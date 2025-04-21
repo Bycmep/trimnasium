@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Price Maker</title>
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+.button {
+    width: 2em; height: 2em;
+    padding: 0.2em; margin: 0.02em;
+    background-color: #eeeeee; border: solid 0.1em #808080; border-radius: 0.2em;
+    cursor: pointer; user-select: none;
+    background-repeat: no-repeat; background-position: center; background-size: 80%;
+    &:hover { background-color: #dddddd; background-size: 90%; }
+    &:active { background-color: #cccccc; background-size: 70%; }
+}
+.button.star {
+    background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path fill='orange' d='M12,0 l7.4,22.8 -19.4,-14.1 24,0 -19.4,14.1z'/><path fill='white' d='M12,3.2 l5.6,17.1 -14.6,-10.6 18,0 -14.6,10.6z'/></svg>");
+}
+
+button {
+    height: 2em;
+}
+table { margin: 0.5em auto; border-collapse: collapse;
+    td { border: 1px solid black; padding: 0.5em; }
+}
+</style>
+</head>
+<body>
+<script type="module">
+"use strict";
+
+const always = 0, minutes = 1, fixed = 2, select = 3;
+
+const pricelist = [
+    { name: 'Bather', type: minutes, rate: 0.3, min: 15, max: 120, step: 5,
+        estimate: [ 15, 30, 45, 60, 75 ], default: true },
+    { name: 'Groomer assistant', type: minutes, rate: 0.35, min: 15, max: 120, step: 5,
+        estimate: [ 15, 30, 45, 60, 75 ], default: true },
+    { name: 'Groomer', type: minutes, rate: 0.4, min: 15, max: 120, step: 5,
+        estimate: [ 15, 30, 45, 60, 75 ], default: true },
+    { name: 'Clean feet', type: fixed, rate: 20 },
+    { name: 'Clean face', type: fixed, rate: 15 },
+    { name: 'Flee shampoo', type: select, options: [
+        { name: 'small', rate: 10 },        
+        { name: 'medium', rate: 15 },       
+        { name: 'large', rate: 20 }        
+    ] },
+    { name: 'Medicated shampoo', type: select, options: [
+        { name: 'small', rate: 10 },        
+        { name: 'medium', rate: 15 },       
+        { name: 'large', rate: 20 }        
+    ] },
+    { name: 'Mats', type: minutes, rate: 0.75, min: 0, max: 60, increment: 4 },
+    { name: 'Deshedding', type: minutes, rate: 0.75, min: 0, max: 60, increment: 4 },
+    { name: 'Hair dye', type: select, options: [
+        { name: 'small', rate: 15 },        
+        { name: 'medium', rate: 20 },       
+        { name: 'large', rate: 25 }        
+    ] },
+    { name: 'Nail polish', type: select, options: [
+        { name: 'easy', rate: 15 },        
+        { name: 'hard', rate: 25 }        
+    ] },
+    { name: 'Administration', type: always, rate: 18 }
+
+];
+
+class Page {
+    static #ids = [];
+    static body = new Page();
+
+    constructor(element, parent, svg) {
+        if (element) {
+            this.e = element;
+            this.parent = parent;
+            this.svg = svg;
+        } else {
+            this.e = document.body;
+            this.parent = null;
+            this.svg = false;
+        }
+    }
+
+    static #create(type, parent, attributes) {
+        if (type == 'text')
+            return new Page(document.createTextNode(attributes), parent, false);
+        const tag = type.split('.');
+        const svg = (parent.svg || tag[0].toLowerCase() == 'svg');
+        const e = (svg)? 
+            document.createElementNS("http://www.w3.org/2000/svg", tag[0]) :
+            document.createElement(tag[0]);
+        for (let i = 1; i < tag.length; i++) e.classList.add(tag[i]);
+        return new Page(e, parent, svg).set(attributes);
+    }
+
+    insert(type, attributes) {
+        const created = Page.#create(type, this, attributes);
+        const e = created.e;
+        if (!this.child) this.child = [ created ];
+        else this.child.push(created);
+        this.e.appendChild(e);
+        return created;
+    }
+
+    append(type, attributes) {
+        const created = Page.#create(type, this.parent, attributes);
+        const e = created.e;
+        const index = this.parent.child.indexOf(this);
+        if (index + 1 == this.parent.child.length) this.parent.e.appendChild(e);
+        else this.parent.e.insertBefore(e, this.parent.child[index + 1].e);
+        this.parent.child.splice(index + 1, 0, created);
+        return created;
+    }
+
+    prepend(type, attributes) {
+        const created = Page.#create(type, this.parent, attributes);
+        const e = created.e;
+        const index = this.parent.child.indexOf(this);
+        this.parent.child.splice(index, 0, created);
+        this.parent.e.insertBefore(e, this.e);
+        return created;
+    }
+
+    set(attributes) {
+        if (!attributes) return this;
+        const e = this.e;
+        for (const attribute in attributes) {
+            const value = attributes[attribute];
+            if (attribute == 'class') {
+                const classes = value.split('.');
+                for (const c of classes)
+                    e.classList.add(c);
+            } else if (attribute == 'style') {
+                const values = value.split(';');
+                for (const v of values) {
+                    const vv = v.split(':');
+                    if (vv.length > 1) 
+                        e.style[vv[0]] = vv[1];
+                }
+            } else if (e[attribute] !== undefined) e[attribute] = value;
+            else e.setAttribute(attribute, value);
+        }
+        return this;
+    }
+
+    style(attributes) {
+        const e = this.e;
+        for (const attribute in attributes) {
+            const value = attributes[attribute];
+            e.style[attribute] = value;
+        }
+        return this;
+    }
+
+    getChild(num) {
+        if (num < 0) return this.child[this.child.length + num];
+        return this.child[num];
+    }
+
+    up(n) {
+        let r = this;
+        if (!n) n = 1;
+        for (let i = 0; i < n; i++) r = r.parent;
+        return r;
+    }
+
+    class(classname) {
+        this.e.classList.add(classname);
+        return this;
+    }
+    declass(classname) {
+        if (!classname) this.e.removeAttribute('class');
+        else this.e.classList.remove(classname);
+        return this;
+    }
+
+    id(id) {
+        Page.#ids[id] = this;
+        return this;
+    }
+    static get(id) {
+        return Page.#ids[id];
+    }
+    find(element) {
+        if (this.e == element) return this;
+        if (this.child)
+            for (const child of this.child) {
+                const found = child.find(element);
+                if (found) return(found);
+            }
+        return false;
+    }
+
+    html(value) {
+        this.e.innerHTML = value;
+        return this;
+    }
+    text(value) {
+        this.e.innerText = value;
+        return this;
+    }
+    css(csstext) {
+        this.e.style.cssText = csstext;
+        return this;
+    }
+
+    clear() {
+        this.e.innerHTML = "";
+        this.child = undefined;
+        return this;
+    }
+    remove() {
+        this.e.remove();
+        if (this.parent) {
+            const index = this.parent.child.indexOf(this);
+            if(index != -1) {
+                this.parent.child.splice(index, 1);
+            }
+        }
+    }
+}
+
+const table = Page.body.insert("table");
+let total, difficulty, add_list;
+
+const selector = table.insert("tr").insert("td", { colspan: 3 }).
+    insert("text", "Difficulty: ").
+    append("select", {
+        onchange: (event) => {
+            difficulty = parseInt(event.target.value);
+            selector.set({ disabled: true });
+            showServices();
+            calculate();
+        }
+    }
+);
+selector.insert("option").text("Select...");
+for (let i = 1; i < 6; i++) {
+    let s = '';
+    for (let j = 0; j < i; j++) s += "\u2B50";
+    console.log(s);
+    selector.insert("option", { value: i }).text(s);
+}
+
+function showServices() {
+    total = table.insert("tr");
+    total.insert("td", { colspan: 2 }).text("Total: ").append("td");
+    add_list = table.insert("tr").insert("td", { colspan: 3 }).insert("select", {
+        onchange: (event) => {
+            let position;
+            for (position of pricelist) if (position.name == event.target.value) break;
+            addPosition(position);
+            populateAddList();
+            calculate();
+        }
+    });
+
+    for (const position of pricelist)
+        if (position.default || position.type == always) addPosition(position);
+    
+    function addPosition(position) {
+        const row = total.prepend("tr").id(position.name);
+        const last_cell = row.insert("td").text(position.name).
+            append("td").append("td");
+        if (position.type != always)
+            last_cell.append("td").insert("button", {
+                onclick: _ => { removePosition(position); }
+            }).text("Remove");
+        switch(position.type) {
+            case minutes:
+                row.child[1].insert('input', {
+                        type: 'number',
+                        value: position.estimate? 
+                            position.estimate[difficulty - 1] : position.min,
+                        min: position.min,
+                        max: position.max,
+                        step: position.step,
+                        onchange: calculate
+                }).append('text', ' min');
+                break;
+            case select:
+                const list = row.child[1].insert('select', {
+                    onchange: calculate
+                });
+                for (const option of position.options) {
+                    list.insert("option", { value: option.rate }).text(option.name);
+                }
+                break;
+        }
+        position.added = true;
+    }
+
+    populateAddList();
+
+    
+}
+
+
+function calculate() {
+    let sum = 0;
+    for (const position of pricelist) {
+        if (position.added) {
+            const row = Page.get(position.name);
+            let value;
+            switch (position.type) {
+                case minutes:
+                    value = row.child[1].child[0].e.value * position.rate;
+                    break;
+                case always:
+                case fixed:
+                    value = position.rate;
+                    break;
+                case select:
+                    value = parseInt(row.child[1].child[0].e.value);
+                    break;
+            }
+            row.child[2].text(`$${value.toFixed(2)}`);
+            sum += value;
+        }
+    }
+    total.child[1].text(`$${sum.toFixed(2)}`);
+
+}
+
+function removePosition(position) {
+    Page.get(position.name).remove();
+    position.added = false;
+    calculate();
+    populateAddList();
+}
+
+function populateAddList() {
+    add_list.clear().insert("option").text("Add...");
+    for (const position of pricelist)
+        if (!position.added)
+            add_list.insert("option", { value: position.name }).text(position.name);
+    add_list.set({ disabled: add_list.child.length == 1 });
+}
+
+</script>
+
+</body>
+</html>
