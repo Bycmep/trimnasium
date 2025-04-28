@@ -5,26 +5,33 @@
     <title>Price Maker</title>
     <link rel="icon" type="image/png" href="../favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 
 <style>
-.button {
-    width: 2em; height: 2em;
-    padding: 0.2em; margin: 0.02em;
-    background-color: #eeeeee; border: solid 0.1em #808080; border-radius: 0.2em;
-    cursor: pointer; user-select: none;
-    background-repeat: no-repeat; background-position: center; background-size: 80%;
-    &:hover { background-color: #dddddd; background-size: 90%; }
-    &:active { background-color: #cccccc; background-size: 70%; }
-}
-.button.star {
-    background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path fill='orange' d='M12,0 l7.4,22.8 -19.4,-14.1 24,0 -19.4,14.1z'/><path fill='white' d='M12,3.2 l5.6,17.1 -14.6,-10.6 18,0 -14.6,10.6z'/></svg>");
-}
 
+body, select, input, button {
+  font-family: "Oswald", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+body { font-size: 1.5em; }
+select, button, input { font-size: 1em; }
+input { width: 2em; }
+option { font-weight: 300; }
 button {
-    height: 2em;
+    height: 1.8em; border: 0; background-color: white;
+    &:hover { background-color: lightgray; }
 }
 table { margin: 0.5em auto; border-collapse: collapse;
-    td { border: 1px solid black; padding: 0.5em; }
+    td { border: 0; padding: 0.2em 0.4em;
+        &.c1 { width: 12em; }
+        &.c2 { width: 4em; }
+        &.c3 { width: 4em; text-align: right; }
+        &.total { font-weight: 500; line-height: 2em; }
+    }
 }
 </style>
 </head>
@@ -53,8 +60,8 @@ const pricelist = [
         { name: 'medium', rate: 15 },       
         { name: 'large', rate: 20 }        
     ] },
-    { name: 'Mats', type: minutes, rate: 0.75, min: 0, max: 60, step: 4 },
-    { name: 'Deshedding', type: minutes, rate: 0.75, min: 0, max: 60, step: 4 },
+    { name: 'Mats', type: minutes, rate: 0.75, min: 0, max: 60, step: 5 },
+    { name: 'Deshedding', type: minutes, rate: 0.75, min: 0, max: 60, step: 5 },
     { name: 'Hair dye', type: select, options: [
         { name: 'small', rate: 15 },        
         { name: 'medium', rate: 20 },       
@@ -247,7 +254,7 @@ for (let i = 1; i < 6; i++) {
 
 function showServices() {
     total = table.insert("tr");
-    total.insert("td", { colspan: 2 }).text("Total: ").append("td");
+    total.insert("td.total", { colspan: 2 }).text("Total: ").append("td.total.c3");
     add_list = table.insert("tr").insert("td", { colspan: 3 }).insert("select", {
         onchange: (event) => {
             let position;
@@ -263,12 +270,12 @@ function showServices() {
     
     function addPosition(position) {
         const row = total.prepend("tr").id(position.name);
-        const last_cell = row.insert("td").text(position.name).
-            append("td").append("td");
+        const last_cell = row.insert("td.c1").text(position.name).
+            append("td.c2").append("td.c3");
         if (position.type != always)
             last_cell.append("td").insert("button", {
                 onclick: _ => { removePosition(position); }
-            }).text("Remove");
+            }).text("\u274c");
         switch(position.type) {
             case minutes:
                 row.child[1].insert('input', {
