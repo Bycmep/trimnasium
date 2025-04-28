@@ -19,15 +19,16 @@ body, select, input, button {
 }
 body { font-size: 1.5em; }
 select, button, input { font-size: 1em; }
-input { width: 2em; }
+input { width: 2em; text-align: right; }
 option { font-weight: 300; }
 button {
-    height: 1.8em; border: 0; background-color: white;
+    border: 0; background-color: white; font-size: 0.9em;
+    vertical-align: top;
     &:hover { background-color: lightgray; }
 }
 table { margin: 0.5em auto; border-collapse: collapse;
     td { border: 0; padding: 0.2em 0.4em;
-        &.c1 { width: 12em; }
+        &.c1 { width: 8em; }
         &.c2 { width: 4em; }
         &.c3 { width: 4em; text-align: right; }
         &.total { font-weight: 500; line-height: 2em; }
@@ -39,14 +40,15 @@ table { margin: 0.5em auto; border-collapse: collapse;
 <script type="module">
 "use strict";
 
-const always = 0, minutes = 1, fixed = 2, select = 3;
+const stars = 0, minutes = 1, fixed = 2, select = 3;
 
 const pricelist = [
-    { name: 'Bather', type: minutes, rate: 0.3, min: 15, max: 120, step: 5,
+    { name: 'Fixed costs', type: stars, rate: 5.4, always: true },
+    { name: 'Bather', type: minutes, rate: 0.35, min: 15, max: 120, step: 5,
         estimate: [ 15, 30, 45, 60, 75 ], default: true },
-    { name: 'Groomer assistant', type: minutes, rate: 0.35, min: 15, max: 120, step: 5,
+    { name: 'Groomer assistant', type: minutes, rate: 0.4, min: 15, max: 120, step: 5,
         estimate: [ 15, 30, 45, 60, 75 ], default: true },
-    { name: 'Groomer', type: minutes, rate: 0.4, min: 15, max: 120, step: 5,
+    { name: 'Groomer', type: minutes, rate: 0.45, min: 15, max: 120, step: 5,
         estimate: [ 15, 30, 45, 60, 75 ], default: true },
     { name: 'Clean feet', type: fixed, rate: 20 },
     { name: 'Clean face', type: fixed, rate: 15 },
@@ -71,7 +73,6 @@ const pricelist = [
         { name: 'easy', rate: 15 },        
         { name: 'hard', rate: 25 }        
     ] },
-    { name: 'Administration', type: always, rate: 18 }
 
 ];
 
@@ -238,8 +239,7 @@ const selector = table.insert("tr").insert("td", { colspan: 3 }).
     append("select", {
         onchange: (event) => {
             difficulty = parseInt(event.target.value);
-            selector.set({ disabled: true });
-            showServices();
+            if (!total) showServices();
             calculate();
         }
     }
@@ -248,7 +248,6 @@ selector.insert("option").text("Select...");
 for (let i = 1; i < 6; i++) {
     let s = '';
     for (let j = 0; j < i; j++) s += "\u2B50";
-    console.log(s);
     selector.insert("option", { value: i }).text(s);
 }
 
@@ -266,13 +265,13 @@ function showServices() {
     });
 
     for (const position of pricelist)
-        if (position.default || position.type == always) addPosition(position);
+        if (position.default || position.always) addPosition(position);
     
     function addPosition(position) {
         const row = total.prepend("tr").id(position.name);
         const last_cell = row.insert("td.c1").text(position.name).
             append("td.c2").append("td.c3");
-        if (position.type != always)
+        if (!position.always)
             last_cell.append("td").insert("button", {
                 onclick: _ => { removePosition(position); }
             }).text("\u274c");
@@ -313,10 +312,12 @@ function calculate() {
             const row = Page.get(position.name);
             let value;
             switch (position.type) {
+                case stars:
+                    value = position.rate * difficulty;
+                    break;
                 case minutes:
                     value = row.child[1].child[0].e.value * position.rate;
                     break;
-                case always:
                 case fixed:
                     value = position.rate;
                     break;
