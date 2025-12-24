@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Generate events</title>
+<style>
+</style>
+</head>
+<body>
+
+<script type="module">
+"use strict";
+import { Page } from "./lib/domchain.js";
+import { Tick } from "./lib/tick.js";
+import { Ajax } from "./lib/ajax.js";
+
+function generate() {
+    const day_today = Math.floor(Tick.now()/Tick.DAY);
+    const day_start = day_today - 5, day_end = day_today + 45;
+    const hour_start = 8.5, hour_end = 17, hour_interval = 1/12;
+    const duration_start = 15, duration_end = 90, duration_interval = 5;
+
+    for (let i = 0; i < 3; i++) {
+        const t = (day_start + Math.floor((day_end - day_start + 1) * Math.random()))*Tick.DAY +
+            (hour_start/hour_interval + 
+                Math.floor(((hour_end - hour_start)/hour_interval + 1) * Math.random()))
+                    *Tick.HOUR*hour_interval;
+        const d = (duration_start/duration_interval + 
+            Math.floor(((duration_end - duration_start)/duration_interval + 1) * Math.random()))
+                *duration_interval;
+        const month = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May',
+            'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
+        const time = Tick.toTime(t);
+        const description = `${month[time.month]} ${String(time.day + 1).padStart(2, '0')}, ${String(time.hr).padStart(2, '0')}:${String(time.min).padStart(2, '0')}, duration ${d} min`;
+        api.post({ cmd: 'event', time: t, duration: d*Tick.MIN, desc: description }).then((data) => {
+            console.log(data);
+        });
+    }
+}
+
+
+const button = Page.body.insert("button").text("Generate");
+const api = new Ajax("api.php");
+button.$e.onclick = generate;
+
+
+</script>
+</body>
+</html>
