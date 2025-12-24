@@ -1,9 +1,5 @@
 <?php
-
-$out = [];
-
-$out['time'] = $in['time'];
-$out['duration'] = $in['duration'];
-$out['desc'] = $in['desc'];
+$db->query('insert into events (category, start, duration, description) values
+    ('.$in['category'].','.$in['start'].','.$in['duration'].',"'.$in['desc'].'")');
 
 ?>

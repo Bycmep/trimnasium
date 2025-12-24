@@ -6,6 +6,7 @@ $username = 'admin';
 $password = 'password';
 $dbname = 'trimnasium';
 $output = [];
+$out = [];
 $db = null;
 date_default_timezone_set('America/Los_Angeles');
 $time = date('Y/m/d H:i:s');

@@ -14,13 +14,15 @@ import { Page } from "./lib/domchain.js";
 import { Tick } from "./lib/tick.js";
 import { Ajax } from "./lib/ajax.js";
 
-function generate() {
+async function generate() {
     const day_today = Math.floor(Tick.now()/Tick.DAY);
     const day_start = day_today - 5, day_end = day_today + 45;
     const hour_start = 8.5, hour_end = 17, hour_interval = 1/12;
     const duration_start = 15, duration_end = 90, duration_interval = 5;
 
-    for (let i = 0; i < 3; i++) {
+    await api.post({ cmd: 'ini' });
+
+    for (let i = 0; i < 1000; i++) {
         const t = (day_start + Math.floor((day_end - day_start + 1) * Math.random()))*Tick.DAY +
             (hour_start/hour_interval + 
                 Math.floor(((hour_end - hour_start)/hour_interval + 1) * Math.random()))
@@ -32,9 +34,8 @@ function generate() {
             'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
         const time = Tick.toTime(t);
         const description = `${month[time.month]} ${String(time.day + 1).padStart(2, '0')}, ${String(time.hr).padStart(2, '0')}:${String(time.min).padStart(2, '0')}, duration ${d} min`;
-        api.post({ cmd: 'event', time: t, duration: d*Tick.MIN, desc: description }).then((data) => {
-            console.log(data);
-        });
+        const category = 1 + Math.floor(Math.random()*9);
+        await api.post({ cmd: 'event', category: category, start: t, duration: d*Tick.MIN, desc: description });
     }
 }
 
