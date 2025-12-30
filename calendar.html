@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar</title>
 <style>
+    :root {
+      --moveX: 0px;
+      --moveY: 0px;
+      --scaleX: 1;
+      --scaleY: 1;
+    }
     @font-face { font-family: Roboto; font-weight: 400;
         src: url(font/roboto-v49-latin-regular.woff2); }
     body { font-family: "Roboto", sans-serif; font-optical-sizing: auto; font-weight: 400;
@@ -41,13 +47,6 @@
         &:active { border: solid 0.01em black; }
     }
     td.time { text-align: right; vertical-align: top; font-size: 0.8em; line-height: 0; }
-    div.event { position: absolute; border-radius: 0.4em; overflow: hidden; cursor: pointer;
-        div { font-size: 0.8em; margin: 0.3em 0.6em; overflow: hidden; }
-        /*
-        outline: 0.1em solid red;
-        border: 0.1em solid red; border-color: chocolate;
-        border-radius: 0.3em; margin: -0.1em -0.1em; */
-    }
     div.c1 { box-shadow: inset 0 0 0 0.1em #cc0000; background-color: #ffcccc; }
     div.c2 { box-shadow: inset 0 0 0 0.1em #cc6600; background-color: #ffe5cc; }
     div.c3 { box-shadow: inset 0 0 0 0.1em #cccc00; background-color: #ffffcc; }
@@ -58,10 +57,21 @@
     div.c8 { box-shadow: inset 0 0 0 0.1em #6600cc; background-color: #e5ccff; }
     div.c9 { box-shadow: inset 0 0 0 0.1em #cc00cc; background-color: #ffccff; }
 
-    div.calendar { width: 98%; display: flex; flex-direction: row;
-        
-
+    div.event { position: absolute; border-radius: 0.4em; overflow: hidden; cursor: pointer;
+        &.openCell { animation-name: openCell; animation-duration: 0.3s; animation-fill-mode: forwards;
+            z-index: 20; cursor: auto; }
+        div.desc { font-size: 0.8em; margin: 0.3em 0.6em; overflow: hidden; }
+        div.editor { margin: 0.5em auto; }
     }
+
+    @keyframes openScreener { from { opacity: 0; } to { opacity: 0.9; } }
+    @keyframes openCell {
+        to { left: 10vw; top: 10vh; width: 80vw; height: 80vh; border-radius: 2vh; }
+/*        to { transform: translateX(var(--moveX)) translateY(var(--moveY)); width: 100%; } */
+    }
+
+    div.screener { position: absolute; left: 0px; top: 0px; width: 0; height: 0; z-index: 10; background-color: white;
+        &.block { width: 100vw; height: 100vh; animation-name: openScreener; animation-duration: 0.3s; animation-fill-mode: forwards; } }
 </style>
 </head>
 <body>
@@ -114,6 +124,7 @@ for (let i = obj.start_time; i <= obj.end_time; i += 0.5) {
     row.insert("td.time").text(time);
     for (let j = 0; j < days_to_show; j++) row.insert("td.cell");
 }
+const screener = Page.body.insert("div.screener");
 
 const api = new Ajax("api.php");
 
@@ -136,7 +147,7 @@ async function createEvents() {
         all_events[Math.floor(e.start/Tick.DAY) - current_day].push(e);
         const cell = Page.body.insert(`div.event.c${e.category}`).id(`e${e.id}`);
         cell.$e.onclick = _ => { editEvent(e.id); };
-        cell.insert("div").text(e.description);
+        cell.insert("div.desc").text(e.description);
     }
 }
 
@@ -185,6 +196,13 @@ async function placeEvents() {
 
 function editEvent(id) {
     console.log(id);
+    const style = document.documentElement.style;
+    style.setProperty('--moveX', '300px');
+    style.setProperty('--moveY', '300px');
+    const editor = Page[`e${id}`].class('openCell').clear().insert("div.editor");
+    screener.class('block');
+    // const from = new TimeSelect();
+    // editor.insert("div.line").insert("span").text("FROM:").append(new).append("span").text("TO:")
 }
 
 const resizer = new ResizeObserver(placeEvents);
