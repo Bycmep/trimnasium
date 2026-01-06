@@ -11,31 +11,30 @@
 <script type="module">
 "use strict";
 import { Page } from "./lib/domchain.js";
-import { Tick } from "./lib/tick.js";
+import { Day } from "./lib/day.js";
 import { Ajax } from "./lib/ajax.js";
 
 async function generate() {
-    const day_today = Math.floor(Tick.now()/Tick.DAY);
+    const day_today = Day.now();
     const day_start = day_today - 5, day_end = day_today + 45;
-    const hour_start = 8.5, hour_end = 17, hour_interval = 1/12;
+    const min_start = 8.5*60, min_end = 17*60, min_interval = 5;
     const duration_start = 30, duration_end = 90, duration_interval = 5;
 
     await api.post({ cmd: 'ini' });
 
     for (let i = 0; i < 500; i++) {
-        const t = (day_start + Math.floor((day_end - day_start + 1) * Math.random()))*Tick.DAY +
-            (hour_start/hour_interval + 
-                Math.floor(((hour_end - hour_start)/hour_interval + 1) * Math.random()))
-                    *Tick.HOUR*hour_interval;
-        const d = (duration_start/duration_interval + 
-            Math.floor(((duration_end - duration_start)/duration_interval + 1) * Math.random()))
-                *duration_interval;
+        const day = day_start + Math.trunc((day_end - day_start + 1) * Math.random());
+        let min = min_start + Math.trunc(Math.random()*(min_end - min_start + min_interval));
+        min = min - min%min_interval;
+        let duration = duration_start + Math.trunc(Math.random()*
+            (duration_end - duration_start + duration_interval));
+        duration = duration - duration%duration_interval;
         const month = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May',
             'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
-        const time = Tick.toTime(t);
-        const description = `${month[time.month]} ${String(time.day + 1).padStart(2, '0')}, ${String(time.hr).padStart(2, '0')}:${String(time.min).padStart(2, '0')}, duration ${d} min`;
+        const time = Day.toTime(day);
+        const description = `${month[time.month]} ${String(time.day + 1).padStart(2, '0')}, ${String(Math.trunc(min/60)).padStart(2, '0')}:${String(min%60).padStart(2, '0')}, duration ${duration} min`;
         const category = 1 + Math.floor(Math.random()*9);
-        await api.post({ cmd: 'event', category: category, start: t, duration: d*Tick.MIN, desc: description });
+        await api.post({ cmd: 'event', category: category, day: day, time: min, duration: duration, desc: description });
     }
 }
 

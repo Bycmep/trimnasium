@@ -1,5 +1,4 @@
 <?php
-$db->query('insert into events (category, start, duration, description) values
-    ('.$in['category'].','.$in['start'].','.$in['duration'].',"'.$in['desc'].'")');
-
+$db->query('insert into events (category, day, time, duration, description) values
+    ('.$in['category'].','.$in['day'].','.$in['time'].','.$in['duration'].',"'.$in['desc'].'")');
 ?>

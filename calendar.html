@@ -71,11 +71,11 @@
 import { Page } from "../lib/domchain.js";
 import { PageParse } from './lib/domchainparse.js';
 Page.prototype.parse = PageParse;
-import { Tick } from "../lib/tick.js";
+import { Day } from "../lib/day.js";
 import { Ajax } from "./lib/ajax.js";
 
 const urlParams = new URLSearchParams(window.location.search);
-const this_day = Math.floor(Tick.now()/Tick.DAY);
+const this_day = Day.now();
 let current_day = parseInt(urlParams.get('t'));
 if (!current_day) current_day = this_day;
 const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize);
@@ -95,7 +95,7 @@ const weekday = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ];
 const header = obj.calendar.insert("tr");
 header.parse(`td.side{ div.button#left }`);
 for (let day = current_day; day < current_day + days_to_show; day++) {
-    const t = Tick.toTime(day*Tick.DAY);
+    const t = Day.toTime(day);
     const red = (t.weekday == 0)? '.red' : '';
     const today = (day == this_day)? '.today' : '';
     header.parse(
@@ -127,13 +127,15 @@ initializeEvents();
 const all_events = [];
 for (let i = 0; i < days_to_show; i++) all_events.push([]);
 async function createEvents() {
-    const events = await api.get({ events: current_day, to: (current_day + days_to_show) });
+    const events = await api.get({ events: current_day, to: (current_day + days_to_show - 1) });
     for (const e of events) {
-        e.start = parseInt(e.start);
+        e.day = parseInt(e.day);
+        e.start = parseInt(e.time);
         e.duration = parseInt(e.duration);
         e.id = parseInt(e.id);
         e.end = e.start + e.duration;
-        all_events[Math.floor(e.start/Tick.DAY) - current_day].push(e);
+        console.log(e.day, current_day);
+        all_events[e.day - current_day].push(e);
         const cell = Page.body.insert(`div.event.c${e.category}`).id(`e${e.id}`);
         cell.$e.onclick = _ => { editEvent(e.id); };
         cell.insert("div").text(e.description);
@@ -174,11 +176,11 @@ async function placeEvents() {
         const cellbox = obj.calendar.child(1).child(i + 1).getBox();
 
         for (let e of events) {
-            const start = Tick.hourOfDay(e.start), end = Tick.hourOfDay(e.end);
-            Page[`e${e.id}`].set({ _left: `${cellbox.left + cellbox.width*(e.slot/e.slots*obj.occupy)}px`,
-                _top: `${cellbox.top + (start - obj.start_time)*2*cellbox.height}px`,
+            Page[`e${e.id}`].set({
+                _left: `${cellbox.left + cellbox.width*(e.slot/e.slots*obj.occupy)}px`,
+                _top: `${cellbox.top + (e.start - obj.start_time*60)/30*cellbox.height}px`,
                 _width: `${cellbox.width*obj.occupy/e.slots}px`,
-                _height: `${cellbox.height*(end - start)*2}px` });
+                _height: `${cellbox.height*e.duration/30}px` });
         }
     }
 }
