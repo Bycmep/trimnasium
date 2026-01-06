@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar</title>
+<style>
+    :root {
+      --moveX: 0px;
+      --moveY: 0px;
+      --scaleX: 1;
+      --scaleY: 1;
+    }
+    @font-face { font-family: Roboto; font-weight: 400;
+        src: url(font/roboto-v49-latin-regular.woff2); }
+    body { font-family: "Roboto", sans-serif; font-optical-sizing: auto; font-weight: 400;
+        font-style: normal; font-variation-settings: "wdth" 100; 
+        font-size: 0.85rem; line-height: 1.33; }
+    table { border-spacing: 0; td { text-align: center; vertical-align: middle; padding: 0 0.15em; }}
+    table.calendar { width: 100%; }
+    table.day { margin: 0 auto; border: none;
+        td { text-align: center; line-height: 0.9;
+            &.weekday { font-size: 1.2em; }
+            &.red { color: red }
+        }
+    }
+    div.button { background-repeat: no-repeat; background-position: center; width: 2em; height: 2em;
+        border: 1px solid #888; border-radius: 0.2em;
+        cursor: pointer;
+        &:hover { background-color: #eee; }
+        &:active { background-color: #ccc; }
+        &#left {
+            background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M14,0 v8 h8 v8 h-8 v8 l-12,-12z'/></svg>");
+        }
+        &#right {
+            background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,0 l12,12 -12,12 v-8 h-8 v-8 h8z'/></svg>");
+        }
+    }
+    td.daycell, td.cell { border-left: 0.01em solid #ccc; border-right: 0.01em solid #ccc; }
+    td.today { background-color: #ffffaa; }
+    td.side { width: 2em; vertical-align: top; }
+    td.cell {
+        height: 1.8em;
+        border-top: solid 0.01em #eee; border-bottom: solid 0.01em #eee;
+        cursor: url("data:image/svg+xml;utf8,<svg width='18' height='18' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='M6,0h6v6h6v6h-6v6h-6v-6h-6v-6h6z'/><path fill='white' d='M7,1h4v6h6v4h-6v6h-4v-6h-6v-4h6z'/></svg>") 9 9, auto;
+        &:hover { border: solid 0.01em grey; }
+        &:active { border: solid 0.01em black; }
+    }
+    td.time { text-align: right; vertical-align: top; font-size: 0.8em; line-height: 0; }
+    div.c1 { box-shadow: inset 0 0 0 0.1em #cc0000; background-color: #ffcccc; }
+    div.c2 { box-shadow: inset 0 0 0 0.1em #cc6600; background-color: #ffe5cc; }
+    div.c3 { box-shadow: inset 0 0 0 0.1em #cccc00; background-color: #ffffcc; }
+    div.c4 { box-shadow: inset 0 0 0 0.1em #66cc00; background-color: #e5ffcc; }
+    div.c5 { box-shadow: inset 0 0 0 0.1em #00cc00; background-color: #ccffcc; }
+    div.c6 { box-shadow: inset 0 0 0 0.1em #00cccc; background-color: #ccffff; }
+    div.c7 { box-shadow: inset 0 0 0 0.1em #0066cc; background-color: #cce5ff; }
+    div.c8 { box-shadow: inset 0 0 0 0.1em #6600cc; background-color: #e5ccff; }
+    div.c9 { box-shadow: inset 0 0 0 0.1em #cc00cc; background-color: #ffccff; }
+
+    div.event { position: absolute; border-radius: 0.4em; overflow: hidden; cursor: pointer;
+        &.openCell { animation-name: openCell; animation-duration: 0.3s; animation-fill-mode: forwards;
+            z-index: 20; cursor: auto; }
+        div.desc { font-size: 0.8em; margin: 0.3em 0.6em; overflow: hidden; }
+        div.editor { margin: 0.5em auto; }
+    }
+
+    @keyframes openScreener { from { opacity: 0; } to { opacity: 0.9; } }
+    @keyframes openCell {
+        to { left: 10vw; top: 10vh; width: 80vw; height: 80vh; border-radius: 2vh; }
+/*        to { transform: translateX(var(--moveX)) translateY(var(--moveY)); width: 100%; } */
+    }
+
+    div.screener { position: absolute; left: 0px; top: 0px; width: 0; height: 0; z-index: 10; background-color: white;
+        &.block { width: 100vw; height: 100vh; animation-name: openScreener; animation-duration: 0.3s; animation-fill-mode: forwards; } }
+</style>
+</head>
+<body>
+
+<script type="module">
+"use strict";
+import { Page } from "../lib/domchain.js";
+import { PageParse } from './lib/domchainparse.js';
+Page.prototype.parse = PageParse;
+import { Tick } from "../lib/tick.js";
+import { Ajax } from "./lib/ajax.js";
+
+const urlParams = new URLSearchParams(window.location.search);
+const this_day = Math.floor(Tick.now()/Tick.DAY);
+let current_day = parseInt(urlParams.get('t'));
+if (!current_day) current_day = this_day;
+const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+const em = parseFloat(window.getComputedStyle(document.body).fontSize);
+const days_to_show = Math.ceil((window.innerWidth/em - 4)/27);
+const href = window.location.href.split('?')[0];
+const forward = `${href}?t=${current_day + days_to_show}`;
+const back = `${href}?t=${current_day - days_to_show}`;
+
+const UI = {};
+const obj = { start_time: 8.5, end_time: 17.5, occupy: 0.95 };
+obj.calendar = Page.body.insert("table.calendar");
+const month = [ 'JAN', 'FEB', 'MAR', 'APR', 'MAY',
+    'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC' ];
+const weekday = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ];
+
+const header = obj.calendar.insert("tr");
+header.parse(`td.side{ div.button#left }`);
+for (let day = current_day; day < current_day + days_to_show; day++) {
+    const t = Tick.toTime(day*Tick.DAY);
+    const red = (t.weekday == 0)? '.red' : '';
+    const today = (day == this_day)? '.today' : '';
+    header.parse(
+        `td.daycell${today}{ table.day{ 
+            tr{ td.weekday${red}<$rowspan:2>(${weekday[t.weekday]})#wday td(${month[t.month]}) }
+            tr{ td(${t.day + 1}) }
+        }}`); 
+}
+header.parse(`td.side<$rowspan:0>{ div.button#right }`);
+Page.left.$e.onclick = _ => { window.location.href = back };
+Page.right.$e.onclick = _ => { window.location.href = forward };
+
+for (let i = obj.start_time; i <= obj.end_time; i += 0.5) {
+    const row = obj.calendar.insert("tr");
+    const time = (Math.floor(i) == i)? ((i < 13)? `${i}am` : `${i - 12}pm`) : "";
+    row.insert("td.time").text(time);
+    for (let j = 0; j < days_to_show; j++) row.insert("td.cell");
+}
+const screener = Page.body.insert("div.screener");
+
+const api = new Ajax("api.php");
+
+async function initializeEvents() {
+    await createEvents();
+    await arrangeEvents();
+    await placeEvents();
+}
+initializeEvents();
+
+const all_events = [];
+for (let i = 0; i < days_to_show; i++) all_events.push([]);
+async function createEvents() {
+    const events = await api.get({ events: current_day, to: (current_day + days_to_show) });
+    for (const e of events) {
+        e.start = parseInt(e.start);
+        e.duration = parseInt(e.duration);
+        e.id = parseInt(e.id);
+        e.end = e.start + e.duration;
+        all_events[Math.floor(e.start/Tick.DAY) - current_day].push(e);
+        const cell = Page.body.insert(`div.event.c${e.category}`).id(`e${e.id}`);
+        cell.$e.onclick = _ => { editEvent(e.id); };
+        cell.insert("div.desc").text(e.description);
+    }
+}
+
+async function arrangeEvents() {
+    for (let i = 0; i < days_to_show; i++) {
+        const events = all_events[i];
+        const slots = [];
+        events.sort((a, b) => { return (b.duration - a.duration); });
+
+        for (const e of events) {
+            let j;
+            for (j = 0; j < slots.length; j++) {
+                const slot = slots[j];
+                let k;
+                for (k = 0; k < slot.length; k++) {
+                    const e2 = slot[k];
+                    if (!((e2.start <= e.start && e2.end <= e.start) ||
+                        (e2.start >= e.end && e2.end >= e.end))) break;
+                }
+                if (k != slot.length) continue;
+                e.slot = j; slots[j].push(e); break;
+            }
+            if (j == slots.length) {
+                e.slot = j; slots.push([e]);
+            }
+        }
+        for (const e of events) e.slots = slots.length;
+        console.log(events);
+    }
+}
+
+async function placeEvents() {
+    for (let i = 0; i < days_to_show; i++) {
+        const events = all_events[i];
+        const cellbox = obj.calendar.child(1).child(i + 1).getBox();
+
+        for (let e of events) {
+            const start = Tick.hourOfDay(e.start), end = Tick.hourOfDay(e.end);
+            Page[`e${e.id}`].set({ _left: `${cellbox.left + cellbox.width*(e.slot/e.slots*obj.occupy)}px`,
+                _top: `${cellbox.top + (start - obj.start_time)*2*cellbox.height}px`,
+                _width: `${cellbox.width*obj.occupy/e.slots}px`,
+                _height: `${cellbox.height*(end - start)*2}px` });
+        }
+    }
+}
+
+function editEvent(id) {
+    console.log(id);
+    const style = document.documentElement.style;
+    style.setProperty('--moveX', '300px');
+    style.setProperty('--moveY', '300px');
+    const editor = Page[`e${id}`].class('openCell').clear().insert("div.editor");
+    screener.class('block');
+    // const from = new TimeSelect();
+    // editor.insert("div.line").insert("span").text("FROM:").append(new).append("span").text("TO:")
+}
+
+const resizer = new ResizeObserver(placeEvents);
+resizer.observe(obj.calendar.$e);
+
+
+</script>
+</body>
+</html>
