@@ -3,76 +3,8 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./calendar.css">
 <title>Calendar</title>
-<style>
-    :root {
-      --moveX: 0px;
-      --moveY: 0px;
-      --scaleX: 1;
-      --scaleY: 1;
-    }
-    @font-face { font-family: Roboto; font-weight: 400;
-        src: url(font/roboto-v49-latin-regular.woff2); }
-    body { font-family: "Roboto", sans-serif; font-optical-sizing: auto; font-weight: 400;
-        font-style: normal; font-variation-settings: "wdth" 100; 
-        font-size: 0.85rem; line-height: 1.33; }
-    table { border-spacing: 0; td { text-align: center; vertical-align: middle; padding: 0 0.15em; }}
-    table.calendar { width: 100%; }
-    table.day { margin: 0 auto; border: none;
-        td { text-align: center; line-height: 0.9;
-            &.weekday { font-size: 1.2em; }
-            &.red { color: red }
-        }
-    }
-    div.button { background-repeat: no-repeat; background-position: center; width: 2em; height: 2em;
-        border: 1px solid #888; border-radius: 0.2em;
-        cursor: pointer;
-        &:hover { background-color: #eee; }
-        &:active { background-color: #ccc; }
-        &#left {
-            background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M14,0 v8 h8 v8 h-8 v8 l-12,-12z'/></svg>");
-        }
-        &#right {
-            background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,0 l12,12 -12,12 v-8 h-8 v-8 h8z'/></svg>");
-        }
-    }
-    td.daycell, td.cell { border-left: 0.01em solid #ccc; border-right: 0.01em solid #ccc; }
-    td.today { background-color: #ffffaa; }
-    td.side { width: 2em; vertical-align: top; }
-    td.cell {
-        height: 1.8em;
-        border-top: solid 0.01em #eee; border-bottom: solid 0.01em #eee;
-        cursor: url("data:image/svg+xml;utf8,<svg width='18' height='18' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='M6,0h6v6h6v6h-6v6h-6v-6h-6v-6h6z'/><path fill='white' d='M7,1h4v6h6v4h-6v6h-4v-6h-6v-4h6z'/></svg>") 9 9, auto;
-        &:hover { border: solid 0.01em grey; }
-        &:active { border: solid 0.01em black; }
-    }
-    td.time { text-align: right; vertical-align: top; font-size: 0.8em; line-height: 0; }
-    div.c1 { box-shadow: inset 0 0 0 0.1em #cc0000; background-color: #ffcccc; }
-    div.c2 { box-shadow: inset 0 0 0 0.1em #cc6600; background-color: #ffe5cc; }
-    div.c3 { box-shadow: inset 0 0 0 0.1em #cccc00; background-color: #ffffcc; }
-    div.c4 { box-shadow: inset 0 0 0 0.1em #66cc00; background-color: #e5ffcc; }
-    div.c5 { box-shadow: inset 0 0 0 0.1em #00cc00; background-color: #ccffcc; }
-    div.c6 { box-shadow: inset 0 0 0 0.1em #00cccc; background-color: #ccffff; }
-    div.c7 { box-shadow: inset 0 0 0 0.1em #0066cc; background-color: #cce5ff; }
-    div.c8 { box-shadow: inset 0 0 0 0.1em #6600cc; background-color: #e5ccff; }
-    div.c9 { box-shadow: inset 0 0 0 0.1em #cc00cc; background-color: #ffccff; }
-
-    div.event { position: absolute; border-radius: 0.4em; overflow: hidden; cursor: pointer;
-        &.openCell { animation-name: openCell; animation-duration: 0.3s; animation-fill-mode: forwards;
-            z-index: 20; cursor: auto; }
-        div.desc { font-size: 0.8em; margin: 0.3em 0.6em; overflow: hidden; }
-        div.editor { margin: 0.5em auto; }
-    }
-
-    @keyframes openScreener { from { opacity: 0; } to { opacity: 0.9; } }
-    @keyframes openCell {
-        to { left: 10vw; top: 10vh; width: 80vw; height: 80vh; border-radius: 2vh; }
-/*        to { transform: translateX(var(--moveX)) translateY(var(--moveY)); width: 100%; } */
-    }
-
-    div.screener { position: absolute; left: 0px; top: 0px; width: 0; height: 0; z-index: 10; background-color: white;
-        &.block { width: 100vw; height: 100vh; animation-name: openScreener; animation-duration: 0.3s; animation-fill-mode: forwards; } }
-</style>
 </head>
 <body>
 
@@ -83,6 +15,7 @@ import { PageParse } from './lib/domchainparse.js';
 Page.prototype.parse = PageParse;
 import { Day } from "../lib/day.js";
 import { Ajax } from "./lib/ajax.js";
+import { TimeSelect, NumSelect } from "./lib/timeselect.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const this_day = Day.now();
@@ -115,8 +48,8 @@ for (let day = current_day; day < current_day + days_to_show; day++) {
         }}`); 
 }
 header.parse(`td.side<$rowspan:0>{ div.button#right }`);
-Page.left.$e.onclick = _ => { window.location.href = back };
-Page.right.$e.onclick = _ => { window.location.href = forward };
+Page.$left.$e.onclick = _ => { window.location.href = back };
+Page.$right.$e.onclick = _ => { window.location.href = forward };
 
 for (let i = obj.start_time; i <= obj.end_time; i += 0.5) {
     const row = obj.calendar.insert("tr");
@@ -135,7 +68,7 @@ async function initializeEvents() {
 }
 initializeEvents();
 
-const all_events = [];
+const all_events = [], ref = [];
 for (let i = 0; i < days_to_show; i++) all_events.push([]);
 async function createEvents() {
     const events = await api.get({ events: current_day, to: (current_day + days_to_show - 1) });
@@ -143,9 +76,8 @@ async function createEvents() {
         e.day = parseInt(e.day);
         e.start = parseInt(e.time);
         e.duration = parseInt(e.duration);
-        e.id = parseInt(e.id);
         e.end = e.start + e.duration;
-        console.log(e.day, current_day);
+        ref[e.id] = e;
         all_events[e.day - current_day].push(e);
         const cell = Page.body.insert(`div.event.c${e.category}`).id(`e${e.id}`);
         cell.$e.onclick = _ => { editEvent(e.id); };
@@ -177,7 +109,6 @@ async function arrangeEvents() {
             }
         }
         for (const e of events) e.slots = slots.length;
-        console.log(events);
     }
 }
 
@@ -187,7 +118,7 @@ async function placeEvents() {
         const cellbox = obj.calendar.child(1).child(i + 1).getBox();
 
         for (let e of events) {
-            Page[`e${e.id}`].set({
+            Page[`$e${e.id}`].set({
                 _left: `${cellbox.left + cellbox.width*(e.slot/e.slots*obj.occupy)}px`,
                 _top: `${cellbox.top + (e.start - obj.start_time*60)/30*cellbox.height}px`,
                 _width: `${cellbox.width*obj.occupy/e.slots}px`,
@@ -197,14 +128,58 @@ async function placeEvents() {
 }
 
 function editEvent(id) {
-    console.log(id);
-    const style = document.documentElement.style;
-    style.setProperty('--moveX', '300px');
-    style.setProperty('--moveY', '300px');
-    const editor = Page[`e${id}`].class('openCell').clear().insert("div.editor");
+    const cell = Page[`$e${id}`].class('openCell').clear();
     screener.class('block');
-    // const from = new TimeSelect();
-    // editor.insert("div.line").insert("span").text("FROM:").append(new).append("span").text("TO:")
+    const e = ref[id];
+
+    cell.$e.onclick = () => {};
+    cell.$e.onanimationend = () => {
+        cell.parse(`div.container{ div.r1{ div.button#close } div.r2{ div.editor#editor } div.r1 }`);
+        const time = new TimeSelect(e.start, 5);
+        const duration = new NumSelect(e.duration, 5, 120, 5, 3);
+
+        Page.$editor.insert("text", "Time: ").append(time.$o).
+            append("span", { _display: 'inline-block',_width: '1em' }).
+            append("text", "Duration: ").append(duration.$o).append("text", "min");
+        Page.$editor.insert("p").text(e.description);
+
+        time.minTime = 8*60 + 30; time.maxTime = 21*60 + 30;
+
+        Page.$close.$e.onclick = async () => {
+            if (e.start != time.minutes || e.duration != duration.number) {
+                e.start = time.minutes; e.duration = duration.number;
+                e.end = e.start + e.duration;
+                await arrangeEvents(); await placeEvents();
+            }
+            cell.clear();
+            const style = cell.$e.style;
+            const rstyle = document.documentElement.style;
+            rstyle.setProperty('--left', style.left);
+            rstyle.setProperty('--top', style.top);
+            rstyle.setProperty('--width', style.width);
+            rstyle.setProperty('--height', style.height);
+            cell.declass("openCell").class("closeCell");
+            screener.declass("block").class("unblock");
+            screener.$e.onanimationend = () => {
+                screener.declass("unblock");
+            }
+            cell.$e.onanimationend = () => {
+                cell.declass("closeCell").clear();
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+    
+
 }
 
 const resizer = new ResizeObserver(placeEvents);
