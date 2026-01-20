@@ -20,7 +20,7 @@ try {
         $in = $_GET;
         require 'get/'.array_keys($_GET)[0].'.php';    
     } else {
-        $in = json_decode(file_get_contents('php://input'), true);
+        $in = $_REQUEST;
         require $_SERVER['REQUEST_METHOD'].'/'.$in['cmd'].'.php';
     }
     $output['data'] = $out;

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Tool</title>
+<style>
+div.imgSelect {
+    position: absolute; left: 10vw; top: 5vh; padding: 1em;
+    border: 1px solid black; width: 80vw; height: 80vh;
+    .noshow { display: none; }
+    div.workspace { display: grid; place-items: center;
+        canvas, svg { grid-column: 1; grid-row: 1; max-width: 95%; height: auto; }
+        canvas { border: solid black 1px; }
+        svg { background-color: yellow; opacity: 0.2; }
+    }
+}
+
+div#canvas_stack {
+        display: grid; width: 0; height: 0;
+        canvas { grid-column: 1; grid-row: 1; border: solid black 1px; margin: 1px;
+            &.disappearing:active { opacity: 0; }
+            &.multiply { mix-blend-mode: multiply; }
+            &.sidebyside { grid-column: 2; }
+        }
+    }
+
+
+</style>
+</head>
+<body>
+<script type="module">
+"use strict";
+import { Page } from "./lib/domchain.js";
+import { File } from "./lib/file4.js";
+import { Ajax } from "./lib/ajax.js";
+
+const container = Page.body.insert("div.imgSelect");
+const image = container.insert("img.noshow");
+const canvas = container.insert("div.workspace").insert('canvas').set({ $width: 0, $height: 0 });
+const svg = canvas.append("svg").set({ $width: 0, $height: 0 });
+const ctx = canvas.$e.getContext("2d");
+const open = canvas.append('br').append("button").text("Open image");
+const tmpCanvas = container.insert("canvas");
+const tmpCtx = tmpCanvas.$e.getContext("2d");
+
+open.$e.onclick = async () => {
+    const input = await File.open({ types: [{ description: 'Image files', accept: { 'image/jpeg': ['.jpeg', '.jpg'], 'image/png': ['.png'] }}],
+        excludeAcceptAllOption: true, multiple: false });
+    const data = await input.readData();
+    image.set({ $src: data });
+    image.$e.onload = () => {
+        canvas.set({ $width: image.$e.width, $height: image.$e.height });
+        svg.set({ $width: image.$e.width, $height: image.$e.height });
+        ctx.drawImage(image.$e, 0, 0);
+
+        const cropX = 25;
+        const cropY = 25;
+        const size = 150;
+        const maxSize = 120;
+        const targetSize = size < maxSize ? size : maxSize;
+        tmpCanvas.set({ $width: targetSize, $height: targetSize });
+        tmpCtx.drawImage(canvas.$e, cropX, cropY, size, size, 0, 0, targetSize, targetSize);
+//        const dataURL = tmpCanvas.$e.toDataURL('image/jpeg', 0.95);
+//        uploadURL('api.php', dataURL);
+        tmpCanvas.$e.toBlob((blob) => {
+            uploadBlob('api.php', blob);
+        }, 'image/webp', 0.95);
+    };
+
+    async function uploadBlob(url, blob) {
+        const formData = new FormData();
+        formData.append('file', blob);
+        formData.append('cmd', 'store');
+
+        try {
+            const response = await fetch(url, { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            console.log('Upload successful');
+            const result = await response.text(); // json()  depending on server response
+            console.log('Server response:', result);
+        } catch (error) {
+            console.error('Upload failed:', error);
+        }
+    }
+
+
+/*
+    async function uploadURL(url, dataURL) {
+        const response = await fetch(dataURL);
+        const blob = await response.blob();
+        const formData = new FormData();
+        formData.append('file', blob);
+        formData.append('cmd', 'store');
+        console.log(formData.get('cmd'));
+
+        try {
+            const response = await fetch(url, { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            console.log('Upload successful');
+            const result = await response.text(); // json()  depending on server response
+            console.log('Server response:', result);
+        } catch (error) {
+            console.error('Upload failed:', error);
+        }
+    }
+*/
+
+
+
+//  const output = await File.save({ suggestedName: input.file.name + '.base64', types: [{ description: 'Base64 files', accept: { 'text/plain': ['.base64'] }}] });
+//  await output.write(data);
+//  await output.close();
+}
+
+</script>
+</body>
+</html>
