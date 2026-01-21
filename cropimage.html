@@ -9,20 +9,16 @@ div.imgSelect {
     border: 1px solid black; width: 80vw; height: 80vh;
     .noshow { display: none; }
     div.workspace { display: grid; place-items: center;
-        canvas, svg { grid-column: 1; grid-row: 1; max-width: 95%; height: auto; }
+        canvas, svg { grid-column: 1; grid-row: 1; max-width: 75vw; max-height: 75vh; }
         canvas { border: solid black 1px; }
         svg { background-color: yellow; opacity: 0.2; }
     }
 }
 
 div#canvas_stack {
-        display: grid; width: 0; height: 0;
-        canvas { grid-column: 1; grid-row: 1; border: solid black 1px; margin: 1px;
-            &.disappearing:active { opacity: 0; }
-            &.multiply { mix-blend-mode: multiply; }
-            &.sidebyside { grid-column: 2; }
-        }
-    }
+    display: grid; width: 0; height: 0;
+    canvas { grid-column: 1; grid-row: 1; border: solid black 1px; margin: 1px; }
+}
 
 
 </style>

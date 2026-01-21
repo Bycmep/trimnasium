@@ -149,6 +149,7 @@ function editEvent(id) {
             if (e.start != time.minutes || e.duration != duration.number) {
                 e.start = time.minutes; e.duration = duration.number;
                 e.end = e.start + e.duration;
+                api.put({ cmd: 'eventtime', id: e.id, time: e.start, duration: e.duration });
                 await arrangeEvents(); await placeEvents();
             }
             cell.clear();
@@ -160,12 +161,8 @@ function editEvent(id) {
             rstyle.setProperty('--height', style.height);
             cell.declass("openCell").class("closeCell");
             screener.declass("block").class("unblock");
-            screener.$e.onanimationend = () => {
-                screener.declass("unblock");
-            }
-            cell.$e.onanimationend = () => {
-                cell.declass("closeCell").clear();
-            }
+            screener.$e.onanimationend = () => { screener.declass("unblock"); }
+            cell.$e.onanimationend = () => { cell.declass("closeCell").clear(); }
         }
     }
 
