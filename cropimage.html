@@ -2,108 +2,118 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<title>Tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./font.css">
+<title>Crop Image</title>
 <style>
-div.imgSelect {
-    position: absolute; left: 10vw; top: 5vh; padding: 1em;
-    border: 1px solid black; width: 80vw; height: 80vh;
-    .noshow { display: none; }
-    div.workspace { position: relative; display: grid; place-items: center; max-width: 50vw; max-height: 50vh;
-        canvas, svg { grid-column: 1; grid-row: 1; max-width: 100%; max-height: 100%; display: block; }
-        canvas { border: solid black 1px; }
-        svg { background-color: yellow; opacity: 0.2; }
-    }
+#images { width: 100%; text-align: center; }
+#img, #thumb { display: inline-block; margin: 0.5em; width: auto; height: auto; border: 1px solid black; }
+#img { max-width: calc(75% - 2em); max-height: 80vh; }
+#thumb { vertical-align: top; }
+#svg { display: none; position: absolute;
+    #frame { fill: rgba(0,0,0,0); stroke-width: 0.15em; stroke: red; cursor: grab; }
+    path { stroke: rgba(0,0,0,0); stroke-width: 0.5em; fill: none; }
+    #no, #so { cursor: ns-resize; }
+    #we, #ea { cursor: ew-resize; }
 }
-
-div#canvas_stack {
-    display: grid; width: 0; height: 0;
-    canvas { grid-column: 1; grid-row: 1; border: solid black 1px; margin: 1px; }
-}
-
-
+#buttons { text-align: center; margin: 0 0.5em; }
+#open, #save { margin: 0.1em 0.25em; }
+p.title { font-size: 1.2em; font-weight: bold; text-align: center; background-color: #eee; margin-bottom: 0.5em; }
+.noshow { display: none; }
 </style>
 </head>
 <body>
+
 <script type="module">
-"use strict";
 import { Page } from "./lib/domchain.js";
+import { PageParse } from './lib/domchainparse.js';
+import { Dragable } from './lib/dragable.js';
 import { File } from "./lib/file4.js";
-import { Ajax } from "./lib/ajax.js";
+import { Ajax } from "./lib/ajax2.js";
+Page.prototype.parse = PageParse;
+const em = parseFloat(window.getComputedStyle(document.body).fontSize);
 
-const container = Page.body.insert("div.imgSelect");
-const image = container.insert("img.noshow");
-const canvas = container.insert("div.workspace").insert('canvas').set({ $width: 0, $height: 0 });
-const svg = canvas.append("svg").set({ $width: 0, $height: 0 });
-const ctx = canvas.$e.getContext("2d");
-const open = canvas.append('br').append("button").text("Open image");
-const tmpCanvas = container.insert("canvas");
-const tmpCtx = tmpCanvas.$e.getContext("2d");
+Page.body.parse(`p.title(Create photo) div.noshow#images{ img#img canvas#thumb } svg#svg{ rect#frame path#no path#ea path#so path#we } p#buttons{ button#open(Open file) button.noshow#save(Save photo) }`);
+const ajax = new Ajax('api.php');
+const select = {};
+const image = Page.$img.e, ctx = Page.$thumb.e.getContext("2d");
+const svgMargin = 0.5*em, minSize = 128;
 
-open.$e.onclick = async () => {
+Page.$open.e.onclick = async () => {
     const input = await File.open({ types: [{ description: 'Image files', accept: { 'image/jpeg': ['.jpeg', '.jpg'], 'image/png': ['.png'] }}],
         excludeAcceptAllOption: true, multiple: false });
-    const data = await input.readData();
-    image.set({ $src: data });
-    image.$e.onload = () => {
-        canvas.set({ $width: image.$e.width, $height: image.$e.height });
-        svg.set({ $width: image.$e.width, $height: image.$e.height });
-        ctx.drawImage(image.$e, 0, 0);
+    image.src = await input.readData();
+    image.onload = () => {
+        Page.$images.declass('noshow'); Page.$save.declass('noshow');
+        iniCrop(); setSvg(); cropImage();
+        const resizer = new ResizeObserver(setSvg);
+        resizer.observe(document.body);
+        dragFrame();
+    }
+}
 
-        const cropX = 25;
-        const cropY = 25;
-        const size = 150;
-        const maxSize = 120;
-        const targetSize = size < maxSize ? size : maxSize;
-        tmpCanvas.set({ $width: targetSize, $height: targetSize });
-        tmpCtx.drawImage(canvas.$e, cropX, cropY, size, size, 0, 0, targetSize, targetSize);
-//        tmpCanvas.$e.toBlob((blob) => {
-//            uploadBlob('api.php', blob);
-//        }, 'image/webp', 0.95);
-    };
 
-    async function uploadBlob(url, blob) {
-        const formData = new FormData();
-        formData.append('file', blob);
-        formData.append('cmd', 'store');
+Page.$save.e.onclick = async () => {
+    Page.$thumb.e.toBlob(async (blob) => { const data = await ajax.request('POST', { cmd: 'store', file: blob }); console.info(data); },
+        'image/webp', 0.95); 
+};
 
-        try {
-            const response = await fetch(url, { method: 'POST', body: formData });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            console.log('Upload successful');
-            const result = await response.text(); // json()  depending on server response
-            console.log('Server response:', result);
-        } catch (error) {
-            console.error('Upload failed:', error);
-        }
+function iniCrop() {
+    select.dx = image.naturalWidth, select.dy = image.naturalHeight;
+    if (select.dy > select.dx) { select.x = 0; select.y = Math.round((select.dy - select.dx)/2); select.size = select.dx; }
+    else { select.y = 0; select.x = Math.round((select.dx - select.dy)/2); select.size = select.dy; }
+    if (select.size < minSize) select.size = minSize;
+}
+
+function setSvg() {
+    let box = Page.$img.getaBox();
+    Page.$thumb.set({ _width: `${box.width/4}px` });
+    box = Page.$img.getaBox();
+    Page.$svg.set({ _display: 'block', _left: `${box.x - svgMargin}px`, _top: `${box.y - svgMargin}px`, $width: box.width + 2*svgMargin, $height: box.height + 2*svgMargin });
+    select.scale = select.dx > select.dy ? box.width/select.dx : box.height/select.dy;
+    const x = select.x*select.scale + svgMargin, y = select.y*select.scale + svgMargin, size = select.size*select.scale;
+    Page.$frame.set({ $x: x, $y: y, $width: size, $height: size });
+    Page.$no.set({ $d: `M${x},${y} h${size}` });
+    Page.$so.set({ $d: `M${x},${y + size} h${size}` });
+    Page.$we.set({ $d: `M${x},${y} v${size}` });
+    Page.$ea.set({ $d: `M${x + size},${y} v${size}` });
+}
+
+function cropImage() {
+    Page.$thumb.set({ $width: select.size, $height: select.size });
+    ctx.drawImage(Page.$img.e, select.x, select.y, select.size, select.size, 0, 0, select.size, select.size);
+}
+
+function dragFrame() {
+    const no = new Dragable(Page.$no.e), we = new Dragable(Page.$we.e), center = new Dragable(Page.$frame.e), ea = new Dragable(Page.$ea.e), so = new Dragable(Page.$so.e);
+    const set_old = () => { select.oldx = select.x; select.oldy = select.y; select.oldsize = select.size; };
+    no.ongrab = we.ongrab = ea.ongrab = so.ongrab = set_old;
+    center.ongrab = () => { set_old(); Page.$frame.set({ _cursor: 'grabbing' }); }
+    center.ondrop = () => { Page.$frame.set({ _cursor: 'grab' }); }
+
+    center.onmove = (m) => {
+        let difx = Math.round(m.dx/select.scale), dify = Math.round(m.dy/select.scale);
+        select.x = select.oldx + difx; select.y = select.oldy + dify;
+        if (select.x < 0) select.x = 0; if (select.y < 0) select.y = 0;
+        if (select.x + select.size > select.dx) select.x = select.dx - select.size;
+        if (select.y + select.size > select.dy) select.y = select.dy - select.size;
+        setSvg(); cropImage();
+    }
+    const resize = (dif) => {
+        if (select.oldx - dif < 0) dif = select.oldx;
+        if (select.oldy - dif < 0) dif = select.oldy;
+        if (select.oldx + select.oldsize + dif > select.dx) dif = select.dx - select.oldx - select.oldsize;
+        if (select.oldy + select.oldsize + dif > select.dy) dif = select.dy - select.oldy - select.oldsize;
+        if (select.oldsize + 2*dif < minSize) dif = Math.floor((minSize - select.oldsize)/2);
+        select.x = select.oldx - dif; select.y = select.oldy - dif;
+        select.size = select.oldsize + 2*dif;
+        setSvg(); cropImage();
     }
 
-
-/*
-    async function uploadURL(url, dataURL) {
-        const response = await fetch(dataURL);
-        const blob = await response.blob();
-        const formData = new FormData();
-        formData.append('file', blob);
-        formData.append('cmd', 'store');
-        console.log(formData.get('cmd'));
-
-        try {
-            const response = await fetch(url, { method: 'POST', body: formData });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            console.log('Upload successful');
-            const result = await response.text(); // json()  depending on server response
-            console.log('Server response:', result);
-        } catch (error) {
-            console.error('Upload failed:', error);
-        }
-    }
-*/
-
-
-
-//  const output = await File.save({ suggestedName: input.file.name + '.base64', types: [{ description: 'Base64 files', accept: { 'text/plain': ['.base64'] }}] });
-//  await output.write(data);
-//  await output.close();
+    no.onmove = (m) => { resize(-Math.round(m.dy/select.scale)); }
+    so.onmove = (m) => { resize(Math.round(m.dy/select.scale)); }
+    we.onmove = (m) => { resize(-Math.round(m.dx/select.scale)); }
+    ea.onmove = (m) => { resize(Math.round(m.dx/select.scale)); }
 }
 
 </script>

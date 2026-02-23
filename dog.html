@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./font.css">
+<style>
+table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
+    th { font-size: 1.2em; font-weight: bold; text-align: center;
+        background-color: #eee; }
+    tr.spacer { height: 1em; }
+    td,th {  padding: 0.3em 0.5em; }
+    td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em;
+        vertical-align: top; }
+}
+.field {
+    border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
+    padding: 0.3em 0.6em; font-size: 1.1em;
+    overflow: hidden; 
+}
+.placeholder { opacity: 0.4; color: red; font-size: 0.8em; }
+#name, #breed, #owner, #phone { height: 1.4em; min-width: 15em; }
+#notes { min-height: 1.4em; min-width: 15em; }
+p.buttons { text-align: center; margin: 0 0.5em; }
+div.dictionary { border: 0.01em solid black;
+    div { padding: 0.1em 0.6em; background-color: #fff;
+        &:hover { background-color: #eee; }
+    }
+}
+div.star0, div.star1 { background-repeat: no-repeat; background-position: center;
+    width: 2em; height: 2em; display: inline-block; cursor: pointer; }
+div.star0 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z m0,5.5055 l-1.5451,4.7553 -5,0 4.0451,2.9389 -1.5451,4.7553 4.0451,-2.9389 4.0451,2.9389 -1.5451,-4.7553 4.0451,-2.9389 -5,0z'/></svg>"); }
+div.star1 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z'/></svg>"); }
+
+</style>
+</head>
+<body>
+
+<script type="module">
+import { Page } from "./lib/domchain.js";
+import { PageParse } from './lib/domchainparse.js';
+//import { Dragable } from './lib/dragable.js';
+//import { File } from "./lib/file4.js";
+import { Ajax } from "./lib/ajax2.js";
+import { Field } from "./lib/field.js";
+import { Phone } from "./lib/phone.js";
+Page.prototype.parse = PageParse;
+const em = parseFloat(window.getComputedStyle(document.body).fontSize);
+
+const urlParams = new URLSearchParams(window.location.search);
+const id = parseInt(urlParams.get('id'));
+console.log(id);
+let title = 'New Dog Record';
+if (!isNaN(id)) {
+    title = 'Edit Dog Record';
+}
+document.title = title;
+
+Page.body.parse(`
+table{ tr{ th<$colspan:3>('${title}') }
+    tr.spacer
+    tr{ td.r(Name) td{ br#name } }
+    tr{ td.r(Breed) td{ br#breed} td{img#bicon} }
+    tr{ td.r(Rating) td{ div.star0#star1 div.star0#star2 div.star0#star3 div.star0#star4 div.star0#star5 } }
+    tr{ td.r(Notes) td{ br#notes } }
+    tr{ td.r(Owner) td{ br#owner } }
+    tr{ td.r(Phone) td{ br#phone } }
+    tr{ td<$colspan:3>{ p.buttons{ button#save(Save) }}}
+    tr.spacer
+}`);
+const breeds = new Ajax('breeds');
+const owners = new Ajax('owners');
+const breedlist = await breeds.get();
+const ownerdata = await owners.get();
+const ownerlist = [];
+for (const i of ownerdata) ownerlist.push(i.name);
+
+let name = false, breed = false, rating = false, owner = false, phone = false;
+Page.$save.e.disabled = true;
+
+const field = {};
+field.name = new Field({
+    placeholder: "input the dog's name", hardlimit: 32, nonEmpty: true,
+    onChange: (value) => { name = value; canSave(); }
+});
+field.breed = new Field({
+    placeholder: "select or input the dog's breed", hardlimit: 32, nonEmpty: true,
+    dictionary: breedlist,
+    dictionaryAdd: (value) => { breeds.post({ name: value }); },
+    onChange: (value) => { breed = value; canSave(); }
+});
+field.notes = new Field({
+    hardlimit: 4000, allowCR: true
+});
+field.owner = new Field({
+    placeholder: "select or input the dog's owner's name", hardlimit: 32, nonEmpty: true,
+    dictionary: ownerlist,
+    onChange: (value) => { owner = value; canSave(); }
+});
+field.phone = new Phone({
+    onChange: (value) => { phone = value; canSave(); }
+});
+for (const f in field) {
+    Page[`$${f}`].replace(new Page(field[f].e)).class('field');
+}
+field.phone.set('1234567890');
+
+function setRating(r) {
+    rating = r;
+    for (let i = 1; i <= r; i++) Page[`$star${i}`].declass('star0').class('star1');
+    for (let i = r + 1; i <= 5; i++) Page[`$star${i}`].declass('star1').class('star0');
+    canSave();
+}
+for (let i = 1; i <= 5; i++) Page[`$star${i}`].e.onclick = () => { setRating(i); };
+
+
+
+
+
+
+
+
+function canSave() {
+    Page.$save.e.disabled = !(rating && name && breed && owner && phone);
+}
+
+</script>
+</body>
+</html>

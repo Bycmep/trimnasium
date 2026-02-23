@@ -18,10 +18,10 @@ try {
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $in = $_GET;
-        require 'get/'.array_keys($_GET)[0].'.php';    
+        require array_keys($_GET)[0].'/get.php';    
     } else {
         $in = $_REQUEST;
-        require $_SERVER['REQUEST_METHOD'].'/'.$in['cmd'].'.php';
+        require $in['_obj_'].'/'.$_SERVER['REQUEST_METHOD'].'.php';
     }
     $output['data'] = $out;
     $output['log'] = strip_tags(ob_get_clean());
@@ -33,5 +33,9 @@ try {
     echo json_encode($output); 
     if ($db) $db->close();
     exit(-1);
+}
+
+function quote($s) {
+    return "'".str_replace("'","''",$s)."'";
 }
 ?>

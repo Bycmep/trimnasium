@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<body>
+<script type="module">
+import { Page } from "./lib/domchain.js";
+import { PageParse } from './lib/domchainparse.js';
+import { Ajax } from "./lib/ajax2.js";
+Page.prototype.parse = PageParse;
+
+Page.body.parse(`button#ini(Initialize tables)`);
+const ajax = new Ajax('ini');
+Page.$ini.e.onclick = () => { ajax.post(); }; 
+
+</script>
+</body>
+</html>
