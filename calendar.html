@@ -15,7 +15,7 @@ import { Page } from "../lib/domchain.js";
 import { PageParse } from './lib/domchainparse.js';
 Page.prototype.parse = PageParse;
 import { Day } from "../lib/day.js";
-import { Ajax } from "./lib/ajax.js";
+import { Ajax } from "./lib/ajax2.js";
 import { TimeSelect, NumSelect } from "./lib/timeselect.js";
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -49,8 +49,8 @@ for (let day = current_day; day < current_day + days_to_show; day++) {
         }}`); 
 }
 header.parse(`td.side<$rowspan:0>{ div.button#right }`);
-Page.$left.$e.onclick = _ => { window.location.href = back };
-Page.$right.$e.onclick = _ => { window.location.href = forward };
+Page.$left.e.onclick = _ => { window.location.href = back };
+Page.$right.e.onclick = _ => { window.location.href = forward };
 
 for (let i = obj.start_time; i <= obj.end_time; i += 0.5) {
     const row = obj.calendar.insert("tr");
@@ -60,7 +60,7 @@ for (let i = obj.start_time; i <= obj.end_time; i += 0.5) {
 }
 const screener = Page.body.insert("div.screener");
 
-const api = new Ajax("api.php");
+const events = new Ajax("events");
 
 async function initializeEvents() {
     await createEvents();
@@ -72,8 +72,8 @@ initializeEvents();
 const all_events = [], ref = [];
 for (let i = 0; i < days_to_show; i++) all_events.push([]);
 async function createEvents() {
-    const events = await api.get({ events: current_day, to: (current_day + days_to_show - 1) });
-    for (const e of events) {
+    const eventlist = await events.get({ from: current_day, to: (current_day + days_to_show - 1) });
+    for (const e of eventlist) {
         e.day = parseInt(e.day);
         e.start = parseInt(e.time);
         e.duration = parseInt(e.duration);
@@ -81,7 +81,7 @@ async function createEvents() {
         ref[e.id] = e;
         all_events[e.day - current_day].push(e);
         const cell = Page.body.insert(`div.event.c${e.category}`).id(`e${e.id}`);
-        cell.$e.onclick = _ => { editEvent(e.id); };
+        cell.e.onclick = _ => { editEvent(e.id); };
         cell.insert("div.desc").text(e.description);
     }
 }
@@ -116,7 +116,7 @@ async function arrangeEvents() {
 async function placeEvents() {
     for (let i = 0; i < days_to_show; i++) {
         const events = all_events[i];
-        const cellbox = obj.calendar.child(1).child(i + 1).getBox();
+        const cellbox = obj.calendar.child[1].child[i + 1].getBox();
 
         for (let e of events) {
             Page[`$e${e.id}`].set({
@@ -133,8 +133,8 @@ function editEvent(id) {
     screener.class('block');
     const e = ref[id];
 
-    cell.$e.onclick = () => {};
-    cell.$e.onanimationend = () => {
+    cell.e.onclick = () => {};
+    cell.e.onanimationend = () => {
         cell.parse(`div.container{ div.r1{ div.button#close } div.r2{ div.editor#editor } div.r1 }`);
         const time = new TimeSelect(e.start, 5);
         const duration = new NumSelect(e.duration, 5, 120, 5, 3);
@@ -146,15 +146,15 @@ function editEvent(id) {
 
         time.minTime = 8*60 + 30; time.maxTime = 21*60 + 30;
 
-        Page.$close.$e.onclick = async () => {
+        Page.$close.e.onclick = async () => {
             if (e.start != time.minutes || e.duration != duration.number) {
                 e.start = time.minutes; e.duration = duration.number;
                 e.end = e.start + e.duration;
-                api.put({ cmd: 'eventtime', id: e.id, time: e.start, duration: e.duration });
+                events.post('update', { id: e.id, time: e.start, duration: e.duration });
                 await arrangeEvents(); await placeEvents();
             }
             cell.clear();
-            const style = cell.$e.style;
+            const style = cell.e.style;
             const rstyle = document.documentElement.style;
             rstyle.setProperty('--left', style.left);
             rstyle.setProperty('--top', style.top);
@@ -162,8 +162,8 @@ function editEvent(id) {
             rstyle.setProperty('--height', style.height);
             cell.declass("openCell").class("closeCell");
             screener.declass("block").class("unblock");
-            screener.$e.onanimationend = () => { screener.declass("unblock"); }
-            cell.$e.onanimationend = () => { cell.declass("closeCell").clear(); }
+            screener.e.onanimationend = () => { screener.declass("unblock"); }
+            cell.e.onanimationend = () => { cell.declass("closeCell").clear(); }
         }
     }
 
@@ -181,7 +181,7 @@ function editEvent(id) {
 }
 
 const resizer = new ResizeObserver(placeEvents);
-resizer.observe(obj.calendar.$e);
+resizer.observe(obj.calendar.e);
 
 
 </script>

@@ -42,6 +42,7 @@ const svgMargin = 0.5*em, minSize = 128;
 Page.$open.e.onclick = async () => {
     const input = await File.open({ types: [{ description: 'Image files', accept: { 'image/jpeg': ['.jpeg', '.jpg'], 'image/png': ['.png'] }}],
         excludeAcceptAllOption: true, multiple: false });
+    console.log(input); 
     image.src = await input.readData();
     image.onload = () => {
         Page.$images.declass('noshow'); Page.$save.declass('noshow');

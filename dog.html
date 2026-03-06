@@ -4,7 +4,10 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="./font.css">
+<link rel="stylesheet" href="./icons.css">
 <style>
+/* :root { --left1: 0; --top1: 0; --left2: 0; --top2: 0; } */
+
 table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
     th { font-size: 1.2em; font-weight: bold; text-align: center;
         background-color: #eee; }
@@ -12,6 +15,7 @@ table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
     td,th {  padding: 0.3em 0.5em; }
     td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em;
         vertical-align: top; }
+    td.l { min-width: 20em;}
 }
 .field {
     border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
@@ -22,15 +26,47 @@ table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
 #name, #breed, #owner, #phone { height: 1.4em; min-width: 15em; }
 #notes { min-height: 1.4em; min-width: 15em; }
 p.buttons { text-align: center; margin: 0 0.5em; }
+button { margin: 0.1em 0.25em; min-width: 6em; }
 div.dictionary { border: 0.01em solid black;
     div { padding: 0.1em 0.6em; background-color: #fff;
         &:hover { background-color: #eee; }
     }
 }
-div.star0, div.star1 { background-repeat: no-repeat; background-position: center;
+div.icon { background-repeat: no-repeat; background-position: center;
     width: 2em; height: 2em; display: inline-block; cursor: pointer; }
 div.star0 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z m0,5.5055 l-1.5451,4.7553 -5,0 4.0451,2.9389 -1.5451,4.7553 4.0451,-2.9389 4.0451,2.9389 -1.5451,-4.7553 4.0451,-2.9389 -5,0z'/></svg>"); }
 div.star1 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z'/></svg>"); }
+div.plus { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,4 h4 v6 h6 v4 h-6 v6 h-4 v-6 h-6 v-4 h6z'/></svg>"); }
+div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
+    margin-right: 0.3em; width: 3em; height: 3em; cursor: pointer; }
+
+div.addphoto {
+    position: absolute; left: 0; top: 0; min-width: 100vw; min-height: 100vh;
+    background-color: rgba(0,0,0,0.3);
+}
+
+div.addphoto { 
+    display: grid; place-items: center;
+    div.popup { margin: 1em 2em;
+        border: 0.03em solid black; border-radius: 0.8em;
+        background-color: white; padding: 1em;
+        #images { text-align: center; }
+        #img, #thumb { display: inline-block;
+            width: auto; height: auto; border: 1px solid black; }
+        #img { max-width: calc(80% - 1em); max-height: 80vh; margin-right: 0.5em; }
+        #thumb { vertical-align: top; }
+        #svg { display: none; position: absolute;
+            #frame { fill: rgba(0,0,0,0); stroke-width: 0.15em; stroke: red; cursor: grab; }
+            path { stroke: rgba(0,0,0,0); stroke-width: 0.5em; fill: none; }
+            #no, #so { cursor: ns-resize; }
+            #we, #ea { cursor: ew-resize; }
+        }
+    }
+}
+
+div.spinner { display: inline-block; width: 2em; }
+
+
 
 </style>
 </head>
@@ -39,12 +75,13 @@ div.star1 { background-image: url("data:image/svg+xml;utf8,<svg width='24' heigh
 <script type="module">
 import { Page } from "./lib/domchain.js";
 import { PageParse } from './lib/domchainparse.js';
-//import { Dragable } from './lib/dragable.js';
-//import { File } from "./lib/file4.js";
+Page.prototype.parse = PageParse;
 import { Ajax } from "./lib/ajax2.js";
 import { Field } from "./lib/field.js";
 import { Phone } from "./lib/phone.js";
-Page.prototype.parse = PageParse;
+import { File } from "./lib/file4.js";
+import { Dragable } from "./lib/dragable.js";
+import { Spinner } from "./lib/spinner.js";
 const em = parseFloat(window.getComputedStyle(document.body).fontSize);
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -59,23 +96,28 @@ document.title = title;
 Page.body.parse(`
 table{ tr{ th<$colspan:3>('${title}') }
     tr.spacer
-    tr{ td.r(Name) td{ br#name } }
+    tr{ td.r(Name) td.l{ br#name } }
     tr{ td.r(Breed) td{ br#breed} td{img#bicon} }
-    tr{ td.r(Rating) td{ div.star0#star1 div.star0#star2 div.star0#star3 div.star0#star4 div.star0#star5 } }
+    tr{ td.r(Rating) td#rating }
+    tr{ td.r(Photos) td#photos }
     tr{ td.r(Notes) td{ br#notes } }
     tr{ td.r(Owner) td{ br#owner } }
     tr{ td.r(Phone) td{ br#phone } }
-    tr{ td<$colspan:3>{ p.buttons{ button#save(Save) }}}
+    tr{ td<$colspan:3>{ p.buttons{ button#save(Save) button#cancel(Cancel) }}}
     tr.spacer
 }`);
 const breeds = new Ajax('breeds');
 const owners = new Ajax('owners');
+const photos = new Ajax('photos');
+const dogs = new Ajax('dogs');
 const breedlist = await breeds.get();
 const ownerdata = await owners.get();
 const ownerlist = [];
+const photolist = [ 42, 43, 44, 45, 46, 47, 48, 49, 50 ];
 for (const i of ownerdata) ownerlist.push(i.name);
 
 let name = false, breed = false, rating = false, owner = false, phone = false;
+let notes;
 Page.$save.e.disabled = true;
 
 const field = {};
@@ -86,11 +128,12 @@ field.name = new Field({
 field.breed = new Field({
     placeholder: "select or input the dog's breed", hardlimit: 32, nonEmpty: true,
     dictionary: breedlist,
-    dictionaryAdd: (value) => { breeds.post({ name: value }); },
+    dictionaryAdd: (value) => { breeds.post('create', { name: value }); },
     onChange: (value) => { breed = value; canSave(); }
 });
 field.notes = new Field({
-    hardlimit: 4000, allowCR: true
+    hardlimit: 4000, allowCR: true,
+    onChange: (value) => { notes = value; }
 });
 field.owner = new Field({
     placeholder: "select or input the dog's owner's name", hardlimit: 32, nonEmpty: true,
@@ -104,6 +147,8 @@ for (const f in field) {
     Page[`$${f}`].replace(new Page(field[f].e)).class('field');
 }
 field.phone.set('1234567890');
+const spinner = new Spinner();
+Page.$photos.insert(new Page(spinner.e)).class('spinner');
 
 function setRating(r) {
     rating = r;
@@ -111,18 +156,276 @@ function setRating(r) {
     for (let i = r + 1; i <= 5; i++) Page[`$star${i}`].declass('star1').class('star0');
     canSave();
 }
-for (let i = 1; i <= 5; i++) Page[`$star${i}`].e.onclick = () => { setRating(i); };
+for (let i = 1; i <= 5; i++)
+    Page.$rating.insert("div.icon.star0").id(`star${i}`).e.onclick = () => { setRating(i); };
 
+Page.$save.e.onclick = saveDog;
 
+showPhotos();
 
+function showPhotos() {
+    const style = `
+    @keyframes openView2 {
+        from { left: var(--left); top: var(--top); width: 3em; height: 3em; }
+        to { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
+    }
+    @keyframes closeView2 {
+        from { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
+        to { left: var(--left); top: var(--top); width: 3em; height: 3em; }
+    }
+    @keyframes mvToRight {
+        from { left: 0; }
+        to { left: 100%; }
+    }
+    @keyframes mvToLeft {
+        from { right: 0; }
+        to { right: 100%; }
+    }
+    @keyframes mvFromRight {
+        to { left: 0; }
+        from { left: 100%; }
+    }
+    @keyframes mvFromLeft {
+        from { left: 0; }
+        to { left: var(--left2); }
+    }
+    @keyframes move {
+        from { left: 0; }
+        to { left: var(--leftmv); }
+    }
 
+    div.viewphoto {
+        position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+        background-color: rgba(0,0,0,0.3);
 
+        --size: min(96vw - 6em,96vh);
+        div.holder { display: flex; align-items: center; justify-content: center;
+            position: absolute; overflow: hidden;
+            &.open { animation: openView2 0.3s both; }
+            &.close { animation: closeView2 0.2s both; }
+            img { width: auto; height: auto; border: 0.05em solid black;
+                max-width: calc(100% - 6em); max-height: 100%; display: inline-block;
+                position: relative;
+                &.moveright { animation: mvToRight 0.2s both; }
+                &.moveleft { animation: mvToLeft 0.2s both; }
+                &.movefromright { animation: mvFromRight 0.2s both; }
+                &.movefromleft { animation: mvFromLeft 0.2s both; }
+                &.move { animation: move 0.2s both; }
+        }}
+        div.button { width: 2em; height: 2em; background-color: #eee; border: 1px solid black;
+            min-width: 2em;
+            display: inline-block;
+        }
+        #left { margin: 0 1em 0 50%; }
+        #right { margin: 0 50% 0 1em; }
+        #img1 { cursor: pointer; }
+        .hide { visibility: hidden; }
+    }`;
 
+    const loaded = [], photos = [];
+    for (const n in photolist) {
+        loaded[n] = false;
+        const fname = `img/${String(photolist[n]).padStart(8, '0')}.webp`;
+        const photo = new Page("img.thumb").set({ $src: fname });
+        photos.push(photo);
+        photo.e.onload = () => {
+            loaded[n] = true;
+            for (const ready of loaded) if (!ready) return;
+            display();
+        }
+    }
 
+    function display() {
+        Page.$photos.clear().insert('style').text(style);
+
+        for (let n = 0; n < photos.length; n++) {
+            const photo = photos[n];
+            Page.$photos.insert(photo);
+
+            photo.e.onclick = () => {
+                const box = photo.getaBox();
+                Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
+
+                Page.body.parse(`div.viewphoto#viewphoto {
+                    div.holder.open#holder {
+                        div.icon.left.button.hide#left img#img1
+                        div.icon.right.button.hide#right }}`);
+                Page.$img1.set({ $src: photo.e.src });
+                setTimeout(() => {
+                    setCarousel(n);
+                }, 300);
+            }
+        }
+
+        function setCarousel(n) {
+            function hideButtons() { Page.$left.class('hide'); Page.$right.class('hide'); }
+
+            Page.$img1.e.onclick = () => {
+                hideButtons();
+                const box = photos[n].getaBox();
+                Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
+                Page.$holder.declass("open").class("close");
+                setTimeout(() => { Page.$viewphoto.remove(); }, 200);
+            };
+
+            if (n > 0) {
+                Page.$left.declass('hide');
+                Page.$left.e.onclick = () => { go(n, -1); };
+            }
+            if (n < photos.length - 1) {
+                Page.$right.declass('hide');
+                Page.$right.e.onclick = () => { go(n, +1); };
+            }
+
+            function go(n, dn) {
+                hideButtons();
+                const src = photos[n + dn].e.src;
+                const img1 = Page.$img1;
+                const left = Page.$left.prepend("img", { $src: src });
+                const right = Page.$right.append("img", { $src: src });
+                const img2 = dn < 0 ? left : right;
+                const img3 = dn < 0 ? right : left;
+                const box1 = img1.getBox(); const box2 = img2.getBox();
+                Page.setRoot({ 
+                    leftmv: `${ box1.left - box2.left + (box1.width - box2.width)/2 }px` });
+                img1.class('move'); img2.class('move');
+                setTimeout(() => {
+                    img1.remove(); img2.declass('move'); img3.remove();
+                    img2.prepend(Page.$left); img2.append(Page.$right);
+                    img2.id('img1');
+                    setCarousel(n + dn);
+                }, 300);
+            }
+        };
+        Page.$photos.insert("div.icon.plus").e.onclick = addPhoto;
+    }
+}
+
+async function addPhoto() {
+    const input = await File.open({
+        types: [{ description: 'Image files',
+            accept: { 'image/jpeg': ['.jpeg', '.jpg'], 'image/png': ['.png'] }}],
+        excludeAcceptAllOption: true, multiple: false 
+    });
+    if (input === -1 || input === -2) return;
+    Page.body.parse(`div.addphoto#popup {
+        div.popup {
+            div#images{ img#img canvas#thumb }
+            svg#svg{ rect#frame path#no path#ea path#so path#we }
+            p.buttons{ button#saveimg(Save) button#cancelimg(Cancel) }
+        }
+    }`);
+    const select = {};
+    const image = Page.$img.e, ctx = Page.$thumb.e.getContext("2d");
+    const svgMargin = 0.5*em, minSize = 128;
+
+    image.src = await input.readData();
+    image.onload = () => {
+        iniCrop(); setSvg(); cropImage();
+        window.addEventListener('resize', setSvg);
+        dragFrame();
+    }
+
+    function iniCrop() {
+        select.dx = image.naturalWidth, select.dy = image.naturalHeight;
+        if (select.dy > select.dx) { select.size = select.dx; select.x = 0; 
+            select.y = Math.round((select.dy - select.dx)/2);
+        }
+        else { select.size = select.dy; select.y = 0; 
+            select.x = Math.round((select.dx - select.dy)/2);
+        }
+        if (select.size < minSize) select.size = minSize;
+    }
+        
+    function setSvg() {
+        let box = Page.$img.getaBox();
+        Page.$thumb.set({ _width: `${box.width/4}px` });
+        box = Page.$img.getaBox();
+        Page.$svg.set({ _display: 'block',
+            _left: `${box.x - svgMargin}px`, _top: `${box.y - svgMargin}px`,
+            $width: box.width + 2*svgMargin, $height: box.height + 2*svgMargin
+        });
+        select.scale = select.dx > select.dy ? box.width/select.dx : box.height/select.dy;
+        const x = select.x*select.scale + svgMargin,
+            y = select.y*select.scale + svgMargin, size = select.size*select.scale;
+        Page.$frame.set({ $x: x, $y: y, $width: size, $height: size });
+        Page.$no.set({ $d: `M${x},${y} h${size}` });
+        Page.$so.set({ $d: `M${x},${y + size} h${size}` });
+        Page.$we.set({ $d: `M${x},${y} v${size}` });
+        Page.$ea.set({ $d: `M${x + size},${y} v${size}` });
+    }
+
+    function cropImage() {
+        Page.$thumb.set({ $width: select.size, $height: select.size });
+        ctx.drawImage(Page.$img.e, select.x, select.y, select.size, select.size,
+            0, 0, select.size, select.size);
+    }
+   
+    function dragFrame() {
+        const no = new Dragable(Page.$no.e), we = new Dragable(Page.$we.e),
+            center = new Dragable(Page.$frame.e),
+            ea = new Dragable(Page.$ea.e), so = new Dragable(Page.$so.e);
+        const set_old = () => { select.oldx = select.x; select.oldy = select.y;
+            select.oldsize = select.size; };
+        const resize = (dif) => {
+            if (select.oldx - dif < 0) dif = select.oldx;
+            if (select.oldy - dif < 0) dif = select.oldy;
+            if (select.oldx + select.oldsize + dif > select.dx)
+                dif = select.dx - select.oldx - select.oldsize;
+            if (select.oldy + select.oldsize + dif > select.dy)
+                dif = select.dy - select.oldy - select.oldsize;
+            if (select.oldsize + 2*dif < minSize) 
+                dif = Math.floor((minSize - select.oldsize)/2);
+            select.x = select.oldx - dif; select.y = select.oldy - dif;
+            select.size = select.oldsize + 2*dif;
+            setSvg(); cropImage();
+        }
+
+        center.ongrab = () => { set_old(); Page.$frame.set({ _cursor: 'grabbing' }); }
+        center.ondrop = () => { Page.$frame.set({ _cursor: 'grab' }); }
+        center.onmove = (m) => {
+            let difx = Math.round(m.dx/select.scale), dify = Math.round(m.dy/select.scale);
+            select.x = select.oldx + difx; select.y = select.oldy + dify;
+            if (select.x < 0) select.x = 0; if (select.y < 0) select.y = 0;
+            if (select.x + select.size > select.dx) select.x = select.dx - select.size;
+            if (select.y + select.size > select.dy) select.y = select.dy - select.size;
+            setSvg(); cropImage();
+        }
+
+        no.ongrab = we.ongrab = ea.ongrab = so.ongrab = set_old;
+        no.onmove = (m) => { resize(-Math.round(m.dy/select.scale)); }
+        so.onmove = (m) => { resize(Math.round(m.dy/select.scale)); }
+        we.onmove = (m) => { resize(-Math.round(m.dx/select.scale)); }
+        ea.onmove = (m) => { resize(Math.round(m.dx/select.scale)); }
+    }
+
+    function close() {
+        window.removeEventListener('resize', setSvg);
+        Page.$popup.remove();
+    }
+
+    Page.$saveimg.e.onclick = async () => {
+        Page.$thumb.e.toBlob(async (blob) => {
+            const data = await photos.post('store', { file: blob });
+            if (data.num!=-1) photolist.push(data.num); 
+            close(); showPhotos();
+        }, 'image/webp', 0.95);
+    };
+
+    Page.$cancelimg.e.onclick = close;
+}
 
 function canSave() {
     Page.$save.e.disabled = !(rating && name && breed && owner && phone);
 }
+
+function saveDog() {
+//    dogs.post('create', {
+//        name: name, breed: breed, rating: rating, notes: notes, owner: owner, phone: phone });
+    console.log(name, breed, rating, notes, field.notes.value, owner, phone);
+
+}
+
 
 </script>
 </body>
