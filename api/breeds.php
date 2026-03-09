@@ -6,7 +6,7 @@ function get() {
 }
 function create() {
     global $db, $in;
-    $db->query('insert into breeds (name) values ('.quote($in['name']).')');
+    $db->query('insert into breeds (name) values ('._quote($in['name']).')');
 }
 function delete() {
 }

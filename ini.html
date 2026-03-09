@@ -12,7 +12,7 @@ Page.prototype.parse = PageParse;
 
 Page.body.parse(`button#ini(Initialize tables)`);
 const ajax = new Ajax('ini');
-Page.$ini.e.onclick = () => { ajax.post(); }; 
+Page.$ini.e.onclick = () => { ajax.post('ini'); }; 
 
 </script>
 </body>

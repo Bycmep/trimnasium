@@ -44,8 +44,8 @@ function _insert($table, $vars) {
     global $db, $in;
     $values = [];
     foreach ($vars as $var) $values[] = _quote($in[$var]);
-    echo 'insert into '.$table.' ('.implode(',', $vars).') values ('.implode(',', $values).')';
     $db->query('insert into '.$table.' ('.implode(',', $vars).') values ('.implode(',', $values).')');
+    return $db->insert_id;
 }
 function _update($table, $update) {
     global $db, $in;
@@ -53,7 +53,6 @@ function _update($table, $update) {
     foreach ($in as $key => $value) {
         if (in_array($key, $update)) $pairs[] = $key.'='._quote($value);
     }    
-    echo 'update '.$table.' set '.implode(',', $pairs).' where id = '.$in['id'];
     $db->query('update '.$table.' set '.implode(',', $pairs).' where id = '.$in['id']);
 }
 function _getvar($var) {

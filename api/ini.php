@@ -22,6 +22,10 @@ function ini() {
         $db->query('create table owners (id int unsigned auto_increment primary key,
             name varchar(64), phone varchar(10))');
     }
+    if ($db->query('show tables like "photos"')->num_rows == 0) {
+        echo 'Creating photos table.^';
+        $db->query('create table photos (id int unsigned auto_increment primary key, dog_id int unsigned)');
+    }
     if ($db->query('show tables like "vars"')->num_rows == 0) {
         echo 'Creating var table.^';
         $db->query('create table vars (photos int unsigned)');
