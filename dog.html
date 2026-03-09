@@ -15,12 +15,12 @@ table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
     td,th {  padding: 0.3em 0.5em; }
     td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em;
         vertical-align: top; }
-    td.l { min-width: 20em;}
+    td.l { min-width: 20em; }
 }
 .field {
     border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
     padding: 0.3em 0.6em; font-size: 1.1em;
-    overflow: hidden; 
+    overflow: hidden; max-width: 40em;
 }
 .placeholder { opacity: 0.4; color: red; font-size: 0.8em; }
 #name, #breed, #owner, #phone { height: 1.4em; min-width: 15em; }
@@ -86,11 +86,7 @@ const em = parseFloat(window.getComputedStyle(document.body).fontSize);
 
 const urlParams = new URLSearchParams(window.location.search);
 const id = parseInt(urlParams.get('id'));
-console.log(id);
-let title = 'New Dog Record';
-if (!isNaN(id)) {
-    title = 'Edit Dog Record';
-}
+const title = isNaN(id) ? 'New Dog Record' : 'Edit Dog Record';
 document.title = title;
 
 Page.body.parse(`
@@ -113,11 +109,11 @@ const dogs = new Ajax('dogs');
 const breedlist = await breeds.get();
 const ownerdata = await owners.get();
 const ownerlist = [];
-const photolist = [ 42, 43, 44, 45, 46, 47, 48, 49, 50 ];
+const photolist = [];
+let photolist_stored;
 for (const i of ownerdata) ownerlist.push(i.name);
 
 let name = false, breed = false, rating = false, owner = false, phone = false;
-let notes;
 Page.$save.e.disabled = true;
 
 const field = {};
@@ -133,7 +129,6 @@ field.breed = new Field({
 });
 field.notes = new Field({
     hardlimit: 4000, allowCR: true,
-    onChange: (value) => { notes = value; }
 });
 field.owner = new Field({
     placeholder: "select or input the dog's owner's name", hardlimit: 32, nonEmpty: true,
@@ -146,6 +141,7 @@ field.phone = new Phone({
 for (const f in field) {
     Page[`$${f}`].replace(new Page(field[f].e)).class('field');
 }
+
 field.phone.set('1234567890');
 const spinner = new Spinner();
 Page.$photos.insert(new Page(spinner.e)).class('spinner');
@@ -160,6 +156,19 @@ for (let i = 1; i <= 5; i++)
     Page.$rating.insert("div.icon.star0").id(`star${i}`).e.onclick = () => { setRating(i); };
 
 Page.$save.e.onclick = saveDog;
+
+if (!isNaN(id)) {
+    const data = await dogs.get({ id: id });
+    name = data.name;  field.name.set(name);
+    breed = data.breed; field.breed.set(breed);
+    field.notes.set(data.notes);
+    owner = data.owner; field.owner.set(owner);
+    phone = data.phone; field.phone.set(phone);
+    rating = data.rating; setRating(rating);
+    photolist_stored = await photos.get({ id: id });
+    for (const p of photolist_stored) photolist.push(p);
+    canSave();
+}
 
 showPhotos();
 
@@ -234,6 +243,7 @@ function showPhotos() {
             display();
         }
     }
+    if (photolist.length == 0) display();
 
     function display() {
         Page.$photos.clear().insert('style').text(style);
@@ -416,14 +426,25 @@ async function addPhoto() {
 }
 
 function canSave() {
-    Page.$save.e.disabled = !(rating && name && breed && owner && phone);
+    const cansave = rating && name && breed && owner && phone;
+    Page.$save.e.disabled = !cansave;
+    if (cansave) Page.$save.e.focus();
 }
 
-function saveDog() {
-//    dogs.post('create', {
-//        name: name, breed: breed, rating: rating, notes: notes, owner: owner, phone: phone });
-    console.log(name, breed, rating, notes, field.notes.value, owner, phone);
-
+async function saveDog() {
+    if (isNaN(id)) {
+        const res = await dogs.post('create', {
+            name: name, breed: breed, rating: rating, photoids: photolist.join(','),
+                notes: field.notes.value, owner: owner, phone: phone });
+    } else {
+        const plus = [], minus = [];
+        for (const p of photolist) if (!photolist_stored.includes(p)) plus.push(p);
+        for (const p of photolist_stored) if (!photolist.includes(p)) minus.push(p);
+        await dogs.post('update', {
+            id: id, name: name, breed: breed, rating: rating, plus: plus.join(','), minus: minus.join(','),
+                notes: field.notes.value, owner: owner, phone: phone });
+    }
+    
 }
 
 
