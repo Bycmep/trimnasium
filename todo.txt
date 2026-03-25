@@ -1,0 +1,4 @@
+Rotate photo when adding
+Add owner when saving dog
+Add breed when saving dog
+Dogs table - edit dogs, see events for dogs

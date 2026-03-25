@@ -12,4 +12,11 @@ function get() {
     $q = $db->query('select id from photos where dog_id = '.$in['id']);
     while($f = $q->fetch_assoc()) array_push($out, $f['id']);
 }
+function clean() {
+    global $db;
+    $q = $db->query('select id from photos where dog_id is null');
+    while($f = $q->fetch_assoc()) 
+        unlink('../img/'.str_pad($f['id'], 8, "0", STR_PAD_LEFT).'.webp');
+    $q = $db->query('delete from photos where dog_id is null');
+}
 ?>

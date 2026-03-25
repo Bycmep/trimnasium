@@ -10,9 +10,11 @@ import { PageParse } from './lib/domchainparse.js';
 import { Ajax } from "./lib/ajax2.js";
 Page.prototype.parse = PageParse;
 
-Page.body.parse(`button#ini(Initialize tables)`);
+Page.body.parse(`button#ini(Initialize tables) br button#clean(Clean photos)`);
 const ajax = new Ajax('ini');
 Page.$ini.e.onclick = () => { ajax.post('ini'); }; 
+const photos = new Ajax('photos');
+Page.$clean.e.onclick = () => { photos.post("clean"); };
 
 </script>
 </body>

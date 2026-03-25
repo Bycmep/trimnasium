@@ -5,56 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="./font.css">
 <style>
-table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
-    th { font-size: 1.2em; font-weight: bold; text-align: center;
-        background-color: #eee; }
-    tr.spacer { height: 1em; }
-    td,th {  padding: 0.3em 0.5em; }
-    td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em;
-        vertical-align: top; }
-}
-.field {
-    border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
-    padding: 0.3em 0.6em; font-size: 1.1em;
-    overflow: hidden; 
-}
-.placeholder { opacity: 0.4; color: red; font-size: 0.8em; }
-#name, #breed, #owner, #phone { height: 1.4em; min-width: 15em; }
-#notes { min-height: 1.4em; min-width: 15em; }
-p.buttons { text-align: center; margin: 0 0.5em; }
-div.dictionary { border: 0.01em solid black;
-    div { padding: 0.1em 0.6em; background-color: #fff;
-        &:hover { background-color: #eee; }
-    }
-}
-div.icon { background-repeat: no-repeat; background-position: center;
-    width: 2em; height: 2em; display: inline-block; cursor: pointer; }
-div.star0 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z m0,5.5055 l-1.5451,4.7553 -5,0 4.0451,2.9389 -1.5451,4.7553 4.0451,-2.9389 4.0451,2.9389 -1.5451,-4.7553 4.0451,-2.9389 -5,0z'/></svg>"); }
-div.star1 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z'/></svg>"); }
-div.plus { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,4 h4 v6 h6 v4 h-6 v6 h-4 v-6 h-6 v-4 h6z'/></svg>"); }
-div.plus { border: 0.03em solid black; border-radius: 0.3em; }
-
-div.addphoto { position: absolute; left: 0; top: 0; min-width: 100vw; min-height: 100vh;
-        background-color: rgba(0,0,0,0.3); padding: 10em;
-        div.popup { border: 0.03em solid black; border-radius: 0.8em;
-            display: inline-block;
-            background-color: white; padding: 1em;
-            #images { text-align: center; }
-            #img, #thumb { display: inline-block; margin: 0.5em;
-                width: auto; height: auto; border: 1px solid black; }
-            #img { max-width: calc(75% - 2em); max-height: 80vh; }
-            #thumb { vertical-align: top; }
-            #svg { display: none; position: absolute;
-                #frame { fill: rgba(0,0,0,0); stroke-width: 0.15em; stroke: red; cursor: grab; }
-                path { stroke: rgba(0,0,0,0); stroke-width: 0.5em; fill: none; }
-                #no, #so { cursor: ns-resize; }
-                #we, #ea { cursor: ew-resize; }
-            }
-        #buttons { text-align: center; margin: 0 0.5em; }
-        .button { margin: 0.1em 0.25em; }
-    }
-}
-
 </style>
 </head>
 <body>
@@ -63,113 +13,20 @@ div.addphoto { position: absolute; left: 0; top: 0; min-width: 100vw; min-height
 import { Page } from "./lib/domchain.js";
 import { PageParse } from './lib/domchainparse.js';
 Page.prototype.parse = PageParse;
-import { Ajax } from "./lib/ajax2.js";
-import { Field } from "./lib/field.js";
-import { Phone } from "./lib/phone.js";
-import { File } from "./lib/file4.js";
-import { Dragable } from "./lib/dragable.js";
+import { Alert } from "./lib/alert.js";
+import { Spinner2 } from "./lib/spinner2.js";
 const em = parseFloat(window.getComputedStyle(document.body).fontSize);
-    const popup = Page.body.parse(`div.addphoto {
-        div.popup {
-        }
-    }`);
-//            div#images{ img#img canvas#thumb }
-//            svg#svg{ rect#frame path#no path#ea path#so path#we }
-//            p#buttons{ button#save(Save) button#cancel(Cancel) }
-    const select = {};
-    const image = Page.$img.e, ctx = Page.$thumb.e.getContext("2d");
-    const svgMargin = 0.5*em, minSize = 128;
 
-    image.src = '../test/531233.jpg';
-    image.onload = () => {
-        iniCrop(); setSvg(); cropImage();
-        const resizer = new ResizeObserver(setSvg);
-        resizer.observe(document.body);
-        dragFrame();
-    }
+const style = `
+div.loader {
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.8);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+    div.spinner { width: 5em; display: inline-block; }
+}`;
 
-    function iniCrop() {
-        select.dx = image.naturalWidth, select.dy = image.naturalHeight;
-        if (select.dy > select.dx) { select.size = select.dx; select.x = 0; 
-            select.y = Math.round((select.dy - select.dx)/2);
-        }
-        else { select.size = select.dy; select.y = 0; 
-            select.x = Math.round((select.dx - select.dy)/2);
-        }
-        if (select.size < minSize) select.size = minSize;
-    }
-        
-    function setSvg() {
-        let box = Page.$img.getaBox();
-        Page.$thumb.set({ _width: `${box.width/4}px` });
-        box = Page.$img.getaBox();
-        Page.$svg.set({ _display: 'block',
-            _left: `${box.x - svgMargin}px`, _top: `${box.y - svgMargin}px`,
-            $width: box.width + 2*svgMargin, $height: box.height + 2*svgMargin
-        });
-        select.scale = select.dx > select.dy ? box.width/select.dx : box.height/select.dy;
-        const x = select.x*select.scale + svgMargin,
-            y = select.y*select.scale + svgMargin, size = select.size*select.scale;
-        Page.$frame.set({ $x: x, $y: y, $width: size, $height: size });
-        Page.$no.set({ $d: `M${x},${y} h${size}` });
-        Page.$so.set({ $d: `M${x},${y + size} h${size}` });
-        Page.$we.set({ $d: `M${x},${y} v${size}` });
-        Page.$ea.set({ $d: `M${x + size},${y} v${size}` });
-    }
-
-    function cropImage() {
-        Page.$thumb.set({ $width: select.size, $height: select.size });
-        ctx.drawImage(Page.$img.e, select.x, select.y, select.size, select.size,
-            0, 0, select.size, select.size);
-    }
-   
-    function dragFrame() {
-        const no = new Dragable(Page.$no.e), we = new Dragable(Page.$we.e),
-            center = new Dragable(Page.$frame.e),
-            ea = new Dragable(Page.$ea.e), so = new Dragable(Page.$so.e);
-        const set_old = () => { select.oldx = select.x; select.oldy = select.y;
-            select.oldsize = select.size; };
-        const resize = (dif) => {
-            if (select.oldx - dif < 0) dif = select.oldx;
-            if (select.oldy - dif < 0) dif = select.oldy;
-            if (select.oldx + select.oldsize + dif > select.dx)
-                dif = select.dx - select.oldx - select.oldsize;
-            if (select.oldy + select.oldsize + dif > select.dy)
-                dif = select.dy - select.oldy - select.oldsize;
-            if (select.oldsize + 2*dif < minSize) 
-                dif = Math.floor((minSize - select.oldsize)/2);
-            select.x = select.oldx - dif; select.y = select.oldy - dif;
-            select.size = select.oldsize + 2*dif;
-            setSvg(); cropImage();
-        }
-
-        center.ongrab = () => { set_old(); Page.$frame.set({ _cursor: 'grabbing' }); }
-        center.ondrop = () => { Page.$frame.set({ _cursor: 'grab' }); }
-        center.onmove = (m) => {
-            let difx = Math.round(m.dx/select.scale), dify = Math.round(m.dy/select.scale);
-            select.x = select.oldx + difx; select.y = select.oldy + dify;
-            if (select.x < 0) select.x = 0; if (select.y < 0) select.y = 0;
-            if (select.x + select.size > select.dx) select.x = select.dx - select.size;
-            if (select.y + select.size > select.dy) select.y = select.dy - select.size;
-            setSvg(); cropImage();
-        }
-
-        no.ongrab = we.ongrab = ea.ongrab = so.ongrab = set_old;
-        no.onmove = (m) => { resize(-Math.round(m.dy/select.scale)); }
-        so.onmove = (m) => { resize(Math.round(m.dy/select.scale)); }
-        we.onmove = (m) => { resize(-Math.round(m.dx/select.scale)); }
-        ea.onmove = (m) => { resize(Math.round(m.dx/select.scale)); }
-    }
-
-
-    Page.$save.e.onclick = async () => {
-        Page.$thumb.e.toBlob(async (blob) => { const data = await ajax.request('POST', { cmd: 'store', file: blob }); console.info(data); },
-            'image/webp', 0.95); 
-    };
-
-
-    
-
+const spinner = new Spinner2();
+const loader = Page.body.insert("div.loader");
+loader.insert('style').text(style).append(new Page(spinner.e)).class('spinner');
 
 
 </script>

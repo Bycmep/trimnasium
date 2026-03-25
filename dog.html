@@ -5,17 +5,85 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="./font.css">
 <link rel="stylesheet" href="./icons.css">
-<style>
-/* :root { --left1: 0; --top1: 0; --left2: 0; --top2: 0; } */
+</head>
+<body>
 
+<script type="module">
+import { Page } from "./lib/domchain.js";
+import { PageParse } from './lib/domchainparse.js';
+import { Ajax } from "./lib/ajax2.js";
+import { Field } from "./lib/field.js";
+import { Phone } from "./lib/phone.js";
+import { File } from "./lib/file4.js";
+import { Dragable } from "./lib/dragable.js";
+import { Spinner2 } from "./lib/spinner2.js";
+import { Alert } from "./lib/alert.js";
+Page.prototype.parse = PageParse;
+const em = parseFloat(window.getComputedStyle(document.body).fontSize);
+
+main();
+
+async function main() {
+    const dogdata = await getParams();
+    showUI(dogdata);
+}
+
+async function getParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = parseInt(urlParams.get('id'));
+    let dogdata;
+    if (!isNaN(id)) {
+        const dogs = new Ajax('dogs');
+        dogdata = await dogs.get({ id: id });
+        if (!dogdata) window.location.replace("dog.html");
+    }
+    return dogdata;
+}
+
+async function showUI(dogdata) {
+    const title = dogdata ? 'Edit Dog Record' : 'New Dog Record';
+    document.title = title;
+    const loader = putLoader();
+
+    const breeds = new Ajax('breeds');
+    const owners = new Ajax('owners');
+    const photoapi = new Ajax('photos');
+    const breedlist = await breeds.get();
+    const ownerdata = await owners.get();
+    const ownerlist = [];
+    const photolist = [];
+    let photolist_stored;
+    for (const i of ownerdata) ownerlist.push(i.name);
+    let name = false, breed = false, rating = false, owner = false, phone = false;
+    const field = {};
+
+    showTable();
+    await fillData();
+    getPhotos();
+
+    function putLoader() {
+        const style = `
+        div.loader {
+            position: fixed; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.9);
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+            div.spinner { width: 5em; display: inline-block; }
+        }`;
+
+        const spinner = new Spinner2();
+        const loader = Page.body.insert("div.loader");
+        loader.insert('style').text(style).append(new Page(spinner.e)).class('spinner');
+        return loader;
+    }
+
+    function showTable() {
+        const style = `
 table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
-    th { font-size: 1.2em; font-weight: bold; text-align: center;
-        background-color: #eee; }
+    th { font-size: 1.2em; font-weight: bold; text-align: center; background-color: #eee; }
     tr.spacer { height: 1em; }
     td,th {  padding: 0.3em 0.5em; }
-    td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em;
-        vertical-align: top; }
+    td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em; vertical-align: top; }
     td.l { min-width: 20em; }
+    td#rating { font-size: 1.6em; span { cursor: pointer; } }
 }
 .field {
     border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
@@ -28,32 +96,262 @@ table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
 p.buttons { text-align: center; margin: 0 0.5em; }
 button { margin: 0.1em 0.25em; min-width: 6em; }
 div.dictionary { border: 0.01em solid black;
-    div { padding: 0.1em 0.6em; background-color: #fff;
-        &:hover { background-color: #eee; }
-    }
+    div { padding: 0.1em 0.6em; background-color: #fff; }
 }
-div.icon { background-repeat: no-repeat; background-position: center;
-    width: 2em; height: 2em; display: inline-block; cursor: pointer; }
-div.star0 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z m0,5.5055 l-1.5451,4.7553 -5,0 4.0451,2.9389 -1.5451,4.7553 4.0451,-2.9389 4.0451,2.9389 -1.5451,-4.7553 4.0451,-2.9389 -5,0z'/></svg>"); }
-div.star1 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z'/></svg>"); }
-div.plus { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,4 h4 v6 h6 v4 h-6 v6 h-4 v-6 h-6 v-4 h6z'/></svg>"); }
 div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
-    margin-right: 0.3em; width: 3em; height: 3em; cursor: pointer; }
+    margin-right: 0.3em; width: 3em; height: 3em; cursor: pointer; display: inline-block; }
+        `;
+    
+        Page.body.parse(`
+        style{ "${style}" } 
+        table{ tr{ th<$colspan:3>('${title}') }
+            tr.spacer
+            tr{ td.r(Name) td.l{ br#name } }
+            tr{ td.r(Breed) td{ br#breed} td{img#bicon} }
+            tr{ td.r(Rating) td#rating }
+            tr{ td.r(Photos) td#photos }
+            tr{ td.r(Notes) td{ br#notes } }
+            tr{ td.r(Owner) td{ br#owner } }
+            tr{ td.r(Phone) td{ br#phone } }
+            tr{ td<$colspan:3>{ p.buttons{ button#save(Save) button#cancel(Cancel) }}}
+            tr.spacer
+        }`);
 
+        field.name = new Field({
+            placeholder: "input the dog's name", hardlimit: 32, nonEmpty: true,
+            onChange: (value) => { name = value; canSave(); }
+        });
+        field.breed = new Field({
+            placeholder: "select or input the dog's breed", hardlimit: 32, nonEmpty: true,
+            dictionary: breedlist,
+            dictionaryAdd: (value) => { breeds.post('create', { name: value }); },
+            onChange: (value) => { breed = value; canSave(); }
+        });
+        field.notes = new Field({
+            hardlimit: 4000, allowCR: true,
+        });
+        field.owner = new Field({
+            placeholder: "select or input the dog's owner's name", hardlimit: 32, nonEmpty: true,
+            dictionary: ownerlist,
+            onChange: (value) => { owner = value; canSave(); }
+        });
+        field.phone = new Phone({
+            onChange: (value) => { phone = value; canSave(); }
+        });
+        for (const f in field) {
+            Page[`$${f}`].replace(new Page(field[f].e)).class('field');
+        }
+        for (let i = 1; i <= 5; i++)
+            Page.$rating.insert("span").text("☆").e.onclick = () => { setRating(i); };
+
+        Page.$save.e.disabled = true;
+        Page.$save.e.onclick = saveDog;
+    }
+
+    function setRating(r) {
+        rating = r;
+        for (let i = 0; i < r; i++) Page.$rating.child[i].text("★");
+        for (let i = r; i < 5; i++) Page.$rating.child[i].text("☆");
+        canSave();
+    }
+
+    function canSave() {
+        const cansave = rating && name && breed && owner && phone;
+        Page.$save.e.disabled = !cansave;
+        if (cansave) Page.$save.e.focus();
+    }
+
+    async function saveDog() {
+        const dogs = new Ajax("dogs");
+        if (dogdata) {
+            const plus = [], minus = [];
+            for (const p of photolist) if (!photolist_stored.includes(p)) plus.push(p);
+            for (const p of photolist_stored) if (!photolist.includes(p)) minus.push(p);
+            await dogs.post('update', {
+                id: dogdata.id, name: name, breed: breed, rating: rating, plus: plus.join(','), minus: minus.join(','),
+                    notes: field.notes.value, owner: owner, phone: phone });
+        } else {
+            const res = await dogs.post('create', {
+                name: name, breed: breed, rating: rating, photoids: photolist.join(','),
+                    notes: field.notes.value, owner: owner, phone: phone });
+        }
+        photolist_stored = photolist;
+    }
+
+    async function fillData() {
+        if (!dogdata) return;
+        name = dogdata.name;  field.name.set(name);
+        breed = dogdata.breed; field.breed.set(breed);
+        field.notes.set(dogdata.notes);
+        owner = dogdata.owner; field.owner.set(owner);
+        phone = dogdata.phone; field.phone.set(phone);
+        rating = dogdata.rating; setRating(rating);
+        photolist_stored = await photoapi.get({ id: dogdata.id });
+        for (const p of photolist_stored) photolist.push(p);
+        canSave();
+    }
+
+    function getPhotos() {
+        const style = `
+@keyframes open {
+    from { left: var(--left); top: var(--top); width: 3em; height: 3em; }
+    to { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
+}
+@keyframes close {
+    from { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
+    to { left: var(--left); top: var(--top); width: 3em; height: 3em; }
+}
+@keyframes move {
+    from { left: 0; }
+    to { left: var(--dx); }
+}
+@keyframes movea {
+    from { left: var(--x1); }
+    to { left: var(--x2); }
+}
+
+div.viewphoto {
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.3);
+    display: flex; align-items: center;
+    img { border: 0.05em solid black; }
+
+    --size: min(96vw - 6em,96vh);
+    div.holder { display: grid; place-items: center;
+        grid-template: calc(100% - 2.5em) 2.5em / 2.5em calc(100% - 5em) 2.5em;
+        #left { grid-area: 1 / 1 / 2 / 2; }
+        #img1 { grid-area: 1 / 2 / 3 / 3; }
+        #right { grid-area: 1 / 3 / 2 / 4; }
+        #delete { grid-area: 2 / 3 / 3 / 4; }
+
+        position: absolute; overflow: hidden;
+        &.open { animation: open 0.3s both; }
+        &.close { animation: close 0.2s both; }
+        img { width: auto; height: auto; position: relative;
+            max-width: calc(100% - 6em); max-height: 100%; display: inline-block;
+    }}
+    img.move { animation: move 0.2s both; }
+    img.movea { animation: movea 0.2s both; }
+    div.button { width: 2em; height: 2em; background-color: #eee; border: 1px solid black;
+        min-width: 2em;
+        display: inline-block;
+    }
+    #img1 { cursor: pointer; }
+    .hide { visibility: hidden; }
+}
+        `;
+
+        const loaded = [], photos = [];
+        for (const n in photolist) {
+            loaded[n] = false;
+            const fname = `img/${String(photolist[n]).padStart(8, '0')}.webp`;
+            const photo = new Page("img.thumb").set({ $src: fname });
+            photos.push(photo);
+            photo.e.onload = () => {
+                loaded[n] = true;
+                for (const ready of loaded) if (!ready) return;
+                displayPhotos();
+            }
+        }
+        if (photolist.length == 0) displayPhotos();
+
+        function displayPhotos() {
+            Page.$photos.clear().insert('style').text(style);
+
+            for (let n = 0; n < photos.length; n++) {
+                const photo = photos[n];
+                Page.$photos.insert(photo);
+
+                photo.e.onclick = () => {
+                    const box = photo.getaBox();
+                    Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
+                    Page.body.parse(`div.viewphoto#viewphoto {
+                        div.holder.open#holder {
+                            div.icon.left.button.hide#left img#img1
+                            div.icon.right.button.hide#right
+                            div.icon.delete.button.hide#delete
+                        }}`);
+                    Page.$img1.set({ $src: photo.e.src });
+                    setTimeout(() => { setCarousel(n); }, 300);
+                }
+            }
+
+            Page.$photos.insert("div.icon.plus").e.onclick = addPhoto;
+            loader.remove();
+
+            function setCarousel(n) {
+                function hideButtons() { Page.$delete.class('hide');
+                    Page.$left.class('hide'); Page.$right.class('hide'); }
+
+                Page.$img1.e.onclick = () => {
+                    hideButtons();
+                    const box = photos[n].getaBox();
+                    Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
+                    Page.$holder.declass("open").class("close");
+                    setTimeout(() => { Page.$viewphoto.remove(); }, 200);
+                };
+
+                if (n > 0) {
+                    Page.$left.declass('hide');
+                    Page.$left.e.onclick = () => { go(n, -1); };
+                }
+                if (n < photos.length - 1) {
+                    Page.$right.declass('hide');
+                    Page.$right.e.onclick = () => { go(n, +1); };
+                }
+                Page.$delete.declass('hide').e.onclick = () => {
+                    new Alert("Delete this photo?", [ "OK", "Cancel" ], async (choice) => {
+                        if (choice == 1) return;
+                        photos.splice(n, 1);
+                        photolist.splice(n, 1);
+                        Page.$viewphoto.remove();
+                        displayPhotos();
+                    });
+                };
+
+                function go(n, dn) {
+                    hideButtons();
+                    const screenWidth = document.documentElement.clientWidth;
+                    const src1 = photos[n].e.src, src2 = photos[n + dn].e.src;
+                    const img1 = Page.$img1; const box1 = img1.getBox();
+                    img1.set({ $src: src2 }); const box2 = img1.getBox(); img1.set({ $src: src1 });
+                    
+                    const dx = -dn*screenWidth, x2 = box2.left, x1 = x2 - dx;
+                    const img2 = Page.$holder.append("img", { $src: src2, _position: 'absolute',
+                        _top: `${box2.top}px`, _left: `${x1}px`, _width: `${box2.width}px` });
+                    Page.setRoot({ dx: `${dx}px`, x1: `${x1}px`, x2: `${x2}px` });
+                    img1.class('move'); img2.class('movea');
+                    setTimeout(() => {
+                        img2.remove(); img1.set({$src: src2}).declass('move');
+                        setCarousel(n + dn);
+                    }, 300);
+
+                }
+            };
+        }
+    }
+
+    async function addPhoto() {
+        const input = await File.open({
+            types: [{ description: 'Image files',
+                accept: { 'image/jpeg': ['.jpeg', '.jpg'], 'image/png': ['.png'] }}],
+            excludeAcceptAllOption: true, multiple: false 
+        });
+        if (input === -1 || input === -2) return;
+        
+        const style = `
 div.addphoto {
+    #img, #orig { display: none; }
     position: absolute; left: 0; top: 0; min-width: 100vw; min-height: 100vh;
     background-color: rgba(0,0,0,0.3);
-}
-
-div.addphoto { 
     display: grid; place-items: center;
     div.popup { margin: 1em 2em;
         border: 0.03em solid black; border-radius: 0.8em;
         background-color: white; padding: 1em;
         #images { text-align: center; }
-        #img, #thumb { display: inline-block;
+        #full, #thumb { display: inline-block;
             width: auto; height: auto; border: 1px solid black; }
-        #img { max-width: calc(80% - 1em); max-height: 80vh; margin-right: 0.5em; }
+        #full { max-width: calc(80% - 1em); max-height: 80vh; margin-right: 0.5em; }
         #thumb { vertical-align: top; }
         #svg { display: none; position: absolute;
             #frame { fill: rgba(0,0,0,0); stroke-width: 0.15em; stroke: red; cursor: grab; }
@@ -63,391 +361,160 @@ div.addphoto {
         }
     }
 }
-
-div.spinner { display: inline-block; width: 2em; }
-
-
-
-</style>
-</head>
-<body>
-
-<script type="module">
-import { Page } from "./lib/domchain.js";
-import { PageParse } from './lib/domchainparse.js';
-Page.prototype.parse = PageParse;
-import { Ajax } from "./lib/ajax2.js";
-import { Field } from "./lib/field.js";
-import { Phone } from "./lib/phone.js";
-import { File } from "./lib/file4.js";
-import { Dragable } from "./lib/dragable.js";
-import { Spinner } from "./lib/spinner.js";
-const em = parseFloat(window.getComputedStyle(document.body).fontSize);
-
-const urlParams = new URLSearchParams(window.location.search);
-const id = parseInt(urlParams.get('id'));
-const title = isNaN(id) ? 'New Dog Record' : 'Edit Dog Record';
-document.title = title;
-
-Page.body.parse(`
-table{ tr{ th<$colspan:3>('${title}') }
-    tr.spacer
-    tr{ td.r(Name) td.l{ br#name } }
-    tr{ td.r(Breed) td{ br#breed} td{img#bicon} }
-    tr{ td.r(Rating) td#rating }
-    tr{ td.r(Photos) td#photos }
-    tr{ td.r(Notes) td{ br#notes } }
-    tr{ td.r(Owner) td{ br#owner } }
-    tr{ td.r(Phone) td{ br#phone } }
-    tr{ td<$colspan:3>{ p.buttons{ button#save(Save) button#cancel(Cancel) }}}
-    tr.spacer
-}`);
-const breeds = new Ajax('breeds');
-const owners = new Ajax('owners');
-const photos = new Ajax('photos');
-const dogs = new Ajax('dogs');
-const breedlist = await breeds.get();
-const ownerdata = await owners.get();
-const ownerlist = [];
-const photolist = [];
-let photolist_stored;
-for (const i of ownerdata) ownerlist.push(i.name);
-
-let name = false, breed = false, rating = false, owner = false, phone = false;
-Page.$save.e.disabled = true;
-
-const field = {};
-field.name = new Field({
-    placeholder: "input the dog's name", hardlimit: 32, nonEmpty: true,
-    onChange: (value) => { name = value; canSave(); }
-});
-field.breed = new Field({
-    placeholder: "select or input the dog's breed", hardlimit: 32, nonEmpty: true,
-    dictionary: breedlist,
-    dictionaryAdd: (value) => { breeds.post('create', { name: value }); },
-    onChange: (value) => { breed = value; canSave(); }
-});
-field.notes = new Field({
-    hardlimit: 4000, allowCR: true,
-});
-field.owner = new Field({
-    placeholder: "select or input the dog's owner's name", hardlimit: 32, nonEmpty: true,
-    dictionary: ownerlist,
-    onChange: (value) => { owner = value; canSave(); }
-});
-field.phone = new Phone({
-    onChange: (value) => { phone = value; canSave(); }
-});
-for (const f in field) {
-    Page[`$${f}`].replace(new Page(field[f].e)).class('field');
-}
-
-field.phone.set('1234567890');
-const spinner = new Spinner();
-Page.$photos.insert(new Page(spinner.e)).class('spinner');
-
-function setRating(r) {
-    rating = r;
-    for (let i = 1; i <= r; i++) Page[`$star${i}`].declass('star0').class('star1');
-    for (let i = r + 1; i <= 5; i++) Page[`$star${i}`].declass('star1').class('star0');
-    canSave();
-}
-for (let i = 1; i <= 5; i++)
-    Page.$rating.insert("div.icon.star0").id(`star${i}`).e.onclick = () => { setRating(i); };
-
-Page.$save.e.onclick = saveDog;
-
-if (!isNaN(id)) {
-    const data = await dogs.get({ id: id });
-    name = data.name;  field.name.set(name);
-    breed = data.breed; field.breed.set(breed);
-    field.notes.set(data.notes);
-    owner = data.owner; field.owner.set(owner);
-    phone = data.phone; field.phone.set(phone);
-    rating = data.rating; setRating(rating);
-    photolist_stored = await photos.get({ id: id });
-    for (const p of photolist_stored) photolist.push(p);
-    canSave();
-}
-
-showPhotos();
-
-function showPhotos() {
-    const style = `
-    @keyframes openView2 {
-        from { left: var(--left); top: var(--top); width: 3em; height: 3em; }
-        to { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
-    }
-    @keyframes closeView2 {
-        from { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
-        to { left: var(--left); top: var(--top); width: 3em; height: 3em; }
-    }
-    @keyframes mvToRight {
-        from { left: 0; }
-        to { left: 100%; }
-    }
-    @keyframes mvToLeft {
-        from { right: 0; }
-        to { right: 100%; }
-    }
-    @keyframes mvFromRight {
-        to { left: 0; }
-        from { left: 100%; }
-    }
-    @keyframes mvFromLeft {
-        from { left: 0; }
-        to { left: var(--left2); }
-    }
-    @keyframes move {
-        from { left: 0; }
-        to { left: var(--leftmv); }
-    }
-
-    div.viewphoto {
-        position: fixed; left: 0; top: 0; right: 0; bottom: 0;
-        background-color: rgba(0,0,0,0.3);
-
-        --size: min(96vw - 6em,96vh);
-        div.holder { display: flex; align-items: center; justify-content: center;
-            position: absolute; overflow: hidden;
-            &.open { animation: openView2 0.3s both; }
-            &.close { animation: closeView2 0.2s both; }
-            img { width: auto; height: auto; border: 0.05em solid black;
-                max-width: calc(100% - 6em); max-height: 100%; display: inline-block;
-                position: relative;
-                &.moveright { animation: mvToRight 0.2s both; }
-                &.moveleft { animation: mvToLeft 0.2s both; }
-                &.movefromright { animation: mvFromRight 0.2s both; }
-                &.movefromleft { animation: mvFromLeft 0.2s both; }
-                &.move { animation: move 0.2s both; }
-        }}
-        div.button { width: 2em; height: 2em; background-color: #eee; border: 1px solid black;
-            min-width: 2em;
-            display: inline-block;
-        }
-        #left { margin: 0 1em 0 50%; }
-        #right { margin: 0 50% 0 1em; }
-        #img1 { cursor: pointer; }
-        .hide { visibility: hidden; }
-    }`;
-
-    const loaded = [], photos = [];
-    for (const n in photolist) {
-        loaded[n] = false;
-        const fname = `img/${String(photolist[n]).padStart(8, '0')}.webp`;
-        const photo = new Page("img.thumb").set({ $src: fname });
-        photos.push(photo);
-        photo.e.onload = () => {
-            loaded[n] = true;
-            for (const ready of loaded) if (!ready) return;
-            display();
-        }
-    }
-    if (photolist.length == 0) display();
-
-    function display() {
-        Page.$photos.clear().insert('style').text(style);
-
-        for (let n = 0; n < photos.length; n++) {
-            const photo = photos[n];
-            Page.$photos.insert(photo);
-
-            photo.e.onclick = () => {
-                const box = photo.getaBox();
-                Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
-
-                Page.body.parse(`div.viewphoto#viewphoto {
-                    div.holder.open#holder {
-                        div.icon.left.button.hide#left img#img1
-                        div.icon.right.button.hide#right }}`);
-                Page.$img1.set({ $src: photo.e.src });
-                setTimeout(() => {
-                    setCarousel(n);
-                }, 300);
-            }
-        }
-
-        function setCarousel(n) {
-            function hideButtons() { Page.$left.class('hide'); Page.$right.class('hide'); }
-
-            Page.$img1.e.onclick = () => {
-                hideButtons();
-                const box = photos[n].getaBox();
-                Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
-                Page.$holder.declass("open").class("close");
-                setTimeout(() => { Page.$viewphoto.remove(); }, 200);
-            };
-
-            if (n > 0) {
-                Page.$left.declass('hide');
-                Page.$left.e.onclick = () => { go(n, -1); };
-            }
-            if (n < photos.length - 1) {
-                Page.$right.declass('hide');
-                Page.$right.e.onclick = () => { go(n, +1); };
-            }
-
-            function go(n, dn) {
-                hideButtons();
-                const src = photos[n + dn].e.src;
-                const img1 = Page.$img1;
-                const left = Page.$left.prepend("img", { $src: src });
-                const right = Page.$right.append("img", { $src: src });
-                const img2 = dn < 0 ? left : right;
-                const img3 = dn < 0 ? right : left;
-                const box1 = img1.getBox(); const box2 = img2.getBox();
-                Page.setRoot({ 
-                    leftmv: `${ box1.left - box2.left + (box1.width - box2.width)/2 }px` });
-                img1.class('move'); img2.class('move');
-                setTimeout(() => {
-                    img1.remove(); img2.declass('move'); img3.remove();
-                    img2.prepend(Page.$left); img2.append(Page.$right);
-                    img2.id('img1');
-                    setCarousel(n + dn);
-                }, 300);
-            }
-        };
-        Page.$photos.insert("div.icon.plus").e.onclick = addPhoto;
-    }
-}
-
-async function addPhoto() {
-    const input = await File.open({
-        types: [{ description: 'Image files',
-            accept: { 'image/jpeg': ['.jpeg', '.jpg'], 'image/png': ['.png'] }}],
-        excludeAcceptAllOption: true, multiple: false 
-    });
-    if (input === -1 || input === -2) return;
-    Page.body.parse(`div.addphoto#popup {
-        div.popup {
-            div#images{ img#img canvas#thumb }
-            svg#svg{ rect#frame path#no path#ea path#so path#we }
-            p.buttons{ button#saveimg(Save) button#cancelimg(Cancel) }
-        }
-    }`);
-    const select = {};
-    const image = Page.$img.e, ctx = Page.$thumb.e.getContext("2d");
-    const svgMargin = 0.5*em, minSize = 128;
-
-    image.src = await input.readData();
-    image.onload = () => {
-        iniCrop(); setSvg(); cropImage();
-        window.addEventListener('resize', setSvg);
-        dragFrame();
-    }
-
-    function iniCrop() {
-        select.dx = image.naturalWidth, select.dy = image.naturalHeight;
-        if (select.dy > select.dx) { select.size = select.dx; select.x = 0; 
-            select.y = Math.round((select.dy - select.dx)/2);
-        }
-        else { select.size = select.dy; select.y = 0; 
-            select.x = Math.round((select.dx - select.dy)/2);
-        }
-        if (select.size < minSize) select.size = minSize;
-    }
-        
-    function setSvg() {
-        let box = Page.$img.getaBox();
-        Page.$thumb.set({ _width: `${box.width/4}px` });
-        box = Page.$img.getaBox();
-        Page.$svg.set({ _display: 'block',
-            _left: `${box.x - svgMargin}px`, _top: `${box.y - svgMargin}px`,
-            $width: box.width + 2*svgMargin, $height: box.height + 2*svgMargin
-        });
-        select.scale = select.dx > select.dy ? box.width/select.dx : box.height/select.dy;
-        const x = select.x*select.scale + svgMargin,
-            y = select.y*select.scale + svgMargin, size = select.size*select.scale;
-        Page.$frame.set({ $x: x, $y: y, $width: size, $height: size });
-        Page.$no.set({ $d: `M${x},${y} h${size}` });
-        Page.$so.set({ $d: `M${x},${y + size} h${size}` });
-        Page.$we.set({ $d: `M${x},${y} v${size}` });
-        Page.$ea.set({ $d: `M${x + size},${y} v${size}` });
-    }
-
-    function cropImage() {
-        Page.$thumb.set({ $width: select.size, $height: select.size });
-        ctx.drawImage(Page.$img.e, select.x, select.y, select.size, select.size,
-            0, 0, select.size, select.size);
-    }
-   
-    function dragFrame() {
-        const no = new Dragable(Page.$no.e), we = new Dragable(Page.$we.e),
-            center = new Dragable(Page.$frame.e),
-            ea = new Dragable(Page.$ea.e), so = new Dragable(Page.$so.e);
-        const set_old = () => { select.oldx = select.x; select.oldy = select.y;
-            select.oldsize = select.size; };
-        const resize = (dif) => {
-            if (select.oldx - dif < 0) dif = select.oldx;
-            if (select.oldy - dif < 0) dif = select.oldy;
-            if (select.oldx + select.oldsize + dif > select.dx)
-                dif = select.dx - select.oldx - select.oldsize;
-            if (select.oldy + select.oldsize + dif > select.dy)
-                dif = select.dy - select.oldy - select.oldsize;
-            if (select.oldsize + 2*dif < minSize) 
-                dif = Math.floor((minSize - select.oldsize)/2);
-            select.x = select.oldx - dif; select.y = select.oldy - dif;
-            select.size = select.oldsize + 2*dif;
-            setSvg(); cropImage();
-        }
-
-        center.ongrab = () => { set_old(); Page.$frame.set({ _cursor: 'grabbing' }); }
-        center.ondrop = () => { Page.$frame.set({ _cursor: 'grab' }); }
-        center.onmove = (m) => {
-            let difx = Math.round(m.dx/select.scale), dify = Math.round(m.dy/select.scale);
-            select.x = select.oldx + difx; select.y = select.oldy + dify;
-            if (select.x < 0) select.x = 0; if (select.y < 0) select.y = 0;
-            if (select.x + select.size > select.dx) select.x = select.dx - select.size;
-            if (select.y + select.size > select.dy) select.y = select.dy - select.size;
-            setSvg(); cropImage();
-        }
-
-        no.ongrab = we.ongrab = ea.ongrab = so.ongrab = set_old;
-        no.onmove = (m) => { resize(-Math.round(m.dy/select.scale)); }
-        so.onmove = (m) => { resize(Math.round(m.dy/select.scale)); }
-        we.onmove = (m) => { resize(-Math.round(m.dx/select.scale)); }
-        ea.onmove = (m) => { resize(Math.round(m.dx/select.scale)); }
-    }
-
-    function close() {
-        window.removeEventListener('resize', setSvg);
-        Page.$popup.remove();
-    }
-
-    Page.$saveimg.e.onclick = async () => {
-        Page.$thumb.e.toBlob(async (blob) => {
-            const data = await photos.post('store', { file: blob });
-            if (data.num!=-1) photolist.push(data.num); 
-            close(); showPhotos();
-        }, 'image/webp', 0.95);
-    };
-
-    Page.$cancelimg.e.onclick = close;
-}
-
-function canSave() {
-    const cansave = rating && name && breed && owner && phone;
-    Page.$save.e.disabled = !cansave;
-    if (cansave) Page.$save.e.focus();
-}
-
-async function saveDog() {
-    if (isNaN(id)) {
-        const res = await dogs.post('create', {
-            name: name, breed: breed, rating: rating, photoids: photolist.join(','),
-                notes: field.notes.value, owner: owner, phone: phone });
-    } else {
-        const plus = [], minus = [];
-        for (const p of photolist) if (!photolist_stored.includes(p)) plus.push(p);
-        for (const p of photolist_stored) if (!photolist.includes(p)) minus.push(p);
-        await dogs.post('update', {
-            id: id, name: name, breed: breed, rating: rating, plus: plus.join(','), minus: minus.join(','),
-                notes: field.notes.value, owner: owner, phone: phone });
-    }
+        `;
     
+        Page.body.parse(`
+        div.addphoto#popup {
+            style { "${style}" } 
+            img#img canvas#orig
+            div.popup {
+                div#images { canvas#full canvas#thumb }
+                svg#svg { rect#frame path#no path#ea path#so path#we }
+                p.buttons {  button#cclkwise(↺) button#clkwise(↻)
+                    button#saveimg(Save) button#cancelimg(Cancel) }
+            }
+        }`);
+        const select = {};
+        const image = Page.$img.e;
+        const ctx = Page.$thumb.e.getContext("2d");
+        const ctxf = Page.$full.e.getContext("2d");
+        const ctxo = Page.$orig.e.getContext("2d", { willReadFrequently: true });
+        const svgMargin = 0.5*em, minSize = 128;
+        let alpha = 0, width0, height0, width, height;
+
+        image.src = await input.readData();
+        image.onload = () => {
+            rotate(0);
+            window.addEventListener('resize', setSvg);
+            dragFrame();
+        }
+        Page.$saveimg.e.onclick = save;
+        Page.$cancelimg.e.onclick = close;
+        Page.$clkwise.e.onclick = () => { rotate(1); }
+        Page.$cclkwise.e.onclick = () => { rotate(-1); }
+
+        function rotate(dalpha) {
+            alpha = (alpha + dalpha + 4)%4;
+            width0 = image.naturalWidth; height0 = image.naturalHeight;
+            width = alpha%2 ? height0 : width0; height = alpha%2 ? width0 : height0;
+            Page.$orig.set({ $width: width0, $height: height0 });
+            Page.$full.set({ $width: width, $height: height });
+            if (dalpha == 1) {
+                const x = width - select.y - select.size, y = select.x;
+                select.x = x; select.y = y;
+            } else if (dalpha == -1) {
+                const x = select.y, y = height - select.x - select.size;
+                select.x = x; select.y = y;
+            }  
+
+            ctxo.drawImage(image, 0, 0);
+            const data = ctxo.getImageData(0, 0, width0, height0);
+            const data2 = new ImageData(width, height, { colorSpace: "srgb" });
+            const scr = width*height*4;
+            let j, dj;
+            switch (alpha) {
+                case 0: j = 0; dj = 4; break;
+                case 1: j = width*4 - 4; dj = width*4; break;
+                case 2: j = scr - 4; dj = -4; break;
+                case 3: j = scr - width*4; dj = -width*4; break;
+            }
+            for (let i = 0; i < scr; i += 4) {
+                data2.data[j] = data.data[i];
+                data2.data[j + 1] = data.data[i + 1];
+                data2.data[j + 2] = data.data[i + 2];
+                data2.data[j + 3] = data.data[i + 3];
+                j += dj;
+                if (j > scr) j -= scr + 4;
+                else if (j < 0) j += scr + 4;
+            }
+            ctxf.putImageData(data2, 0, 0);
+            iniCrop(); setSvg(); cropImage();
+        }
+
+        function iniCrop() {
+            if (select.x !== undefined) return;
+            if (height > width) { select.size = width;
+                select.x = 0; select.y = Math.round((height - width)/2); return; }
+            select.size = height; select.y = 0; select.x = Math.round((width - height)/2);
+        }
+            
+        function setSvg() {
+            let box = Page.$full.getaBox();
+            Page.$thumb.set({ _width: `${box.width/4}px` });
+            box = Page.$full.getaBox();
+            Page.$svg.set({ _display: 'block',
+                _left: `${box.x - svgMargin}px`, _top: `${box.y - svgMargin}px`,
+                $width: box.width + 2*svgMargin, $height: box.height + 2*svgMargin
+            });
+            select.scale = box.width/width;
+            const x = select.x*select.scale + svgMargin,
+                y = select.y*select.scale + svgMargin, size = select.size*select.scale;
+            Page.$frame.set({ $x: x, $y: y, $width: size, $height: size });
+            Page.$no.set({ $d: `M${x},${y} h${size}` });
+            Page.$so.set({ $d: `M${x},${y + size} h${size}` });
+            Page.$we.set({ $d: `M${x},${y} v${size}` });
+            Page.$ea.set({ $d: `M${x + size},${y} v${size}` });
+        }
+
+        function cropImage() {
+            Page.$thumb.set({ $width: select.size, $height: select.size });
+            ctx.drawImage(Page.$full.e, select.x, select.y, select.size, select.size,
+                0, 0, select.size, select.size);
+        }
+    
+        function dragFrame() {
+            const no = new Dragable(Page.$no.e), we = new Dragable(Page.$we.e),
+                center = new Dragable(Page.$frame.e),
+                ea = new Dragable(Page.$ea.e), so = new Dragable(Page.$so.e);
+            const set_old = () => { select.oldx = select.x; select.oldy = select.y;
+                select.oldsize = select.size; };
+            const resize = (dif) => {
+                if (select.oldx - dif < 0) dif = select.oldx;
+                if (select.oldy - dif < 0) dif = select.oldy;
+                if (select.oldx + select.oldsize + dif > width)
+                    dif = width - select.oldx - select.oldsize;
+                if (select.oldy + select.oldsize + dif > height)
+                    dif = height - select.oldy - select.oldsize;
+                if (select.oldsize + 2*dif < minSize) 
+                    dif = Math.floor((minSize - select.oldsize)/2);
+                select.x = select.oldx - dif; select.y = select.oldy - dif;
+                select.size = select.oldsize + 2*dif;
+                setSvg(); cropImage();
+            }
+
+            center.ongrab = () => { set_old(); Page.$frame.set({ _cursor: 'grabbing' }); }
+            center.ondrop = () => { Page.$frame.set({ _cursor: 'grab' }); }
+            center.onmove = (m) => {
+                let difx = Math.round(m.dx/select.scale), dify = Math.round(m.dy/select.scale);
+                select.x = select.oldx + difx; select.y = select.oldy + dify;
+                if (select.x < 0) select.x = 0; if (select.y < 0) select.y = 0;
+                if (select.x + select.size > width) select.x = width - select.size;
+                if (select.y + select.size > height) select.y = height - select.size;
+                setSvg(); cropImage();
+            }
+
+            no.ongrab = we.ongrab = ea.ongrab = so.ongrab = set_old;
+            no.onmove = (m) => { resize(-Math.round(m.dy/select.scale)); }
+            so.onmove = (m) => { resize(Math.round(m.dy/select.scale)); }
+            we.onmove = (m) => { resize(-Math.round(m.dx/select.scale)); }
+            ea.onmove = (m) => { resize(Math.round(m.dx/select.scale)); }
+        }
+
+        async function save() {
+            Page.$thumb.e.toBlob(async (blob) => {
+                const data = await photoapi.post('store', { file: blob });
+                if (data.num!=-1) photolist.push(data.num); 
+                close(); getPhotos();
+            }, 'image/webp', 0.95);
+        };
+
+        function close() {
+            window.removeEventListener('resize', setSvg);
+            Page.$popup.remove();
+        }
+
+    }
 }
-
-
 </script>
 </body>
 </html>

@@ -1,12 +1,10 @@
 div.icon {
     background-repeat: no-repeat; background-position: center;
-    &.left {
-        background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M14,0 v8 h8 v8 h-8 v8 l-12,-12z'/></svg>");
-    }
-    &#right {
-        background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,0 l12,12 -12,12 v-8 h-8 v-8 h8z'/></svg>");
-    }
-    &#close {
-        background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M6,4 l6,6 6,-6 2,2 -6,6 6,6 -2,2 -6,-6 -6,6 -2,-2 6,-6 -6,-6z'/></svg>");
-    }
+    &.left { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M14,0 v8 h8 v8 h-8 v8 l-12,-12z'/></svg>"); }
+    &.right { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,0 l12,12 -12,12 v-8 h-8 v-8 h8z'/></svg>"); }
+    &.close { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M6,4 l6,6 6,-6 2,2 -6,6 6,6 -2,2 -6,-6 -6,6 -2,-2 6,-6 -6,-6z'/></svg>"); }
+    &.delete { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M2,2 h6 v-2 h8 v2 h6 v2 h-20z m0,3 h20 v3 l-2,14 v2 h-16 v-2 l-2,-14z m2.75,3 l2,14 h0.75 l-1.5,-14z m3.75,0 l1,14 h1.25 l-0.5,-14z m4.75,0 l-0.5,14 h1.25 l1,-14z m4.5,0 l-1.5,14 h0.75 l2,-14z'/></svg>"); }
+    &.star0 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z m0,5.5055 l-1.5451,4.7553 -5,0 4.0451,2.9389 -1.5451,4.7553 4.0451,-2.9389 4.0451,2.9389 -1.5451,-4.7553 4.0451,-2.9389 -5,0z'/></svg>"); }
+    &.star1 { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M12,0.5766 l2.7812,8.5595 9,0 -7.2812,5.2901 2.7812,8.5595 -7.2812,-5.2901 -7.2812,5.2901 2.7812,-8.5595 -7.2812,-5.2901 9,0z'/></svg>"); }
+    &.plus { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,4 h4 v6 h6 v4 h-6 v6 h-4 v-6 h-6 v-4 h6z'/></svg>"); }
 }
