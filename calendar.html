@@ -17,6 +17,7 @@ Page.prototype.parse = PageParse;
 import { Day } from "../lib/day.js";
 import { Ajax } from "./lib/ajax2.js";
 import { TimeSelect, NumSelect } from "./lib/timeselect.js";
+import { createEvent } from "./event.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const this_day = Day.now();
@@ -29,14 +30,13 @@ const href = window.location.href.split('?')[0];
 const forward = `${href}?t=${current_day + days_to_show}`;
 const back = `${href}?t=${current_day - days_to_show}`;
 
-const UI = {};
-const obj = { start_time: 8.5, end_time: 17.5, occupy: 0.95 };
-obj.calendar = Page.body.insert("table.calendar");
+const UI = { start_time: 8.5, end_time: 17.5, occupy: 0.95 };
+UI.calendar = Page.body.insert("table.calendar");
 const month = [ 'JAN', 'FEB', 'MAR', 'APR', 'MAY',
     'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC' ];
 const weekday = [ 'SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT' ];
 
-const header = obj.calendar.insert("tr");
+const header = UI.calendar.insert("tr");
 header.parse(`td.side{ div.button#left }`);
 for (let day = current_day; day < current_day + days_to_show; day++) {
     const t = Day.toTime(day);
@@ -52,11 +52,14 @@ header.parse(`td.side<$rowspan:0>{ div.button#right }`);
 Page.$left.e.onclick = _ => { window.location.href = back };
 Page.$right.e.onclick = _ => { window.location.href = forward };
 
-for (let i = obj.start_time; i <= obj.end_time; i += 0.5) {
-    const row = obj.calendar.insert("tr");
+for (let i = UI.start_time; i <= UI.end_time; i += 0.5) {
+    const row = UI.calendar.insert("tr");
     const time = (Math.floor(i) == i)? ((i < 13)? `${i}am` : `${i - 12}pm`) : "";
     row.insert("td.time").text(time);
-    for (let j = 0; j < days_to_show; j++) row.insert("td.cell");
+    for (let j = 0; j < days_to_show; j++) {
+        const cell = row.insert("td.cell");
+        cell.e.onclick = () => { createEvent(UI, cell, current_day + j, i); }
+    }
 }
 const screener = Page.body.insert("div.screener");
 
@@ -64,8 +67,8 @@ const events = new Ajax("events");
 
 async function initializeEvents() {
     await createEvents();
-    await arrangeEvents();
-    await placeEvents();
+    arrangeEvents();
+    placeEvents();
 }
 initializeEvents();
 
@@ -86,43 +89,71 @@ async function createEvents() {
     }
 }
 
-async function arrangeEvents() {
+function arrangeEvents() {
     for (let i = 0; i < days_to_show; i++) {
         const events = all_events[i];
         const slots = [];
-        events.sort((a, b) => { return (b.duration - a.duration); });
+        events.sort((a, b) => { return a.category == b.category? 
+            b.duration - a.duration : a.category - b.category; });
+
+        function isFree(slot, start, end) {
+            for (const event of slot) {
+                if (start <= event.start && end <= event.start) continue;
+                if (start >= event.end && end >= event.end) continue;
+                return false;
+            }
+            return true;
+        }
 
         for (const e of events) {
-            let j;
-            for (j = 0; j < slots.length; j++) {
-                const slot = slots[j];
-                let k;
-                for (k = 0; k < slot.length; k++) {
-                    const e2 = slot[k];
-                    if (!((e2.start <= e.start && e2.end <= e.start) ||
-                        (e2.start >= e.end && e2.end >= e.end))) break;
-                }
-                if (k != slot.length) continue;
-                e.slot = j; slots[j].push(e); break;
-            }
-            if (j == slots.length) {
-                e.slot = j; slots.push([e]);
-            }
+            let s;
+            for (s = 0; s < slots.length; s++) if (isFree(slots[s], e.start, e.end)) break;
+            if (s == slots.length) slots.push([]);
+            e.slot = s; slots[s].push(e);
         }
-        for (const e of events) e.slots = slots.length;
+        for (const e of events) { e.slots = slots.length; e.width = 1; }
+
+        function movables(event) {
+            const hits = [];
+            for (const e of events) {
+                if (e.slot != event.slot + event.width) continue;
+                if (e.start <= event.start && e.end <= event.start) continue;
+                if (e.start >= event.end && e.end >= event.end) continue;
+                if (e.slot + e.width == e.slots) return false;
+                hits.push(e);
+                const next = movables(e);
+                if (next === false) return false;
+                hits.push(...next);
+            }
+            return hits;
+        }
+        
+        let changing;
+        do {
+            changing = false;
+            for (const e of events) {
+                if (e.slot + e.width == e.slots) continue;
+                const move = movables(e);
+                if (move !== false) {
+                    for (const m of move) m.slot += 1;
+                    e.width += 1; changing = true;
+                }
+            }
+        } while (changing);
+
     }
 }
 
 async function placeEvents() {
     for (let i = 0; i < days_to_show; i++) {
         const events = all_events[i];
-        const cellbox = obj.calendar.child[1].child[i + 1].getBox();
+        const cellbox = UI.calendar.child[1].child[i + 1].getaBox();
 
         for (let e of events) {
             Page[`$e${e.id}`].set({
-                _left: `${cellbox.left + cellbox.width*(e.slot/e.slots*obj.occupy)}px`,
-                _top: `${cellbox.top + (e.start - obj.start_time*60)/30*cellbox.height}px`,
-                _width: `${cellbox.width*obj.occupy/e.slots}px`,
+                _left: `${cellbox.left + cellbox.width*(e.slot/e.slots*UI.occupy)}px`,
+                _top: `${cellbox.top + (e.start - UI.start_time*60)/30*cellbox.height}px`,
+                _width: `${cellbox.width*UI.occupy*e.width/e.slots}px`,
                 _height: `${cellbox.height*e.duration/30}px` });
         }
     }
@@ -181,7 +212,7 @@ function editEvent(id) {
 }
 
 const resizer = new ResizeObserver(placeEvents);
-resizer.observe(obj.calendar.e);
+resizer.observe(UI.calendar.e);
 
 
 </script>

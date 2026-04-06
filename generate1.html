@@ -12,15 +12,13 @@
 "use strict";
 import { Page } from "./lib/domchain.js";
 import { Day } from "./lib/day.js";
-import { Ajax } from "./lib/ajax.js";
+import { Ajax } from "./lib/ajax2.js";
 
 async function generate() {
     const day_today = Day.now();
     const day_start = day_today - 5, day_end = day_today + 45;
     const min_start = 8.5*60, min_end = 17*60, min_interval = 5;
     const duration_start = 30, duration_end = 90, duration_interval = 5;
-
-    await api.post({ cmd: 'ini' });
 
     for (let i = 0; i < 500; i++) {
         const day = day_start + Math.trunc((day_end - day_start + 1) * Math.random());
@@ -32,16 +30,20 @@ async function generate() {
         const month = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May',
             'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
         const time = Day.toTime(day);
-        const description = `${month[time.month]} ${String(time.day + 1).padStart(2, '0')}, ${String(Math.trunc(min/60)).padStart(2, '0')}:${String(min%60).padStart(2, '0')}, duration ${duration} min`;
+        const description = `${month[time.month]} ${
+            String(time.day + 1).padStart(2, '0')}, ${
+            String(Math.trunc(min/60)).padStart(2, '0')}:${
+            String(min%60).padStart(2, '0')}, duration ${duration} min`;
         const category = 1 + Math.floor(Math.random()*9);
-        await api.post({ cmd: 'event', category: category, day: day, time: min, duration: duration, desc: description });
+        await events.post('create', { category: category, day: day, time: min,
+            duration: duration, description: description });
     }
 }
 
 
 const button = Page.body.insert("button").text("Generate");
-const api = new Ajax("api.php");
-button.$e.onclick = generate;
+const events = new Ajax("events");
+button.e.onclick = generate;
 
 
 </script>

@@ -1,0 +1,110 @@
+/*--- Spinner ---*/
+div.loader {
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+    div.spinner { width: 5em; display: inline-block; }
+}
+
+/*--- Main UI ---*/
+table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
+    th { font-size: 1.2em; font-weight: bold; text-align: center; background-color: #eee; }
+    tr.spacer { height: 1em; }
+    td,th {  padding: 0.3em 0.5em; }
+    td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em; vertical-align: top; }
+    td.l { min-width: 20em; }
+    td#rating { font-size: 1.5em; span { cursor: pointer; } }
+
+    .field {
+        border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
+        padding: 0.3em 0.6em; font-size: 1.1em;
+        overflow: hidden; max-width: 40em;
+    }
+    .placeholder { opacity: 0.4; color: red; font-size: 0.8em; }
+    #name, #breed, #owner, #phone { height: 1.4em; min-width: 15em; }
+    #notes { min-height: 1.4em; min-width: 15em; }
+    p.buttons { text-align: center; margin: 0 0.5em; }
+    button { margin: 0.1em 0.25em; min-width: 6em; }
+    div.icon {
+        background-repeat: no-repeat; background-position: center;
+        &.plus { background-image: url("data:image/svg+xml;utf8,<svg width='24' height='24' xmlns='http://www.w3.org/2000/svg'><path d='M10,4 h4 v6 h6 v4 h-6 v6 h-4 v-6 h-6 v-4 h6z'/></svg>"); }
+    }
+    div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
+        margin-right: 0.3em; width: 3em; height: 3em; cursor: pointer; display: inline-block; }
+}
+div.dictionary { border: 0.01em solid black;
+    div { padding: 0.1em 0.6em; background-color: #fff; }
+}
+
+/*--- View photos ---*/
+@keyframes open {
+    from { left: var(--left); top: var(--top); width: 3em; height: 3em; }
+    to { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
+}
+@keyframes close {
+    from { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
+    to { left: var(--left); top: var(--top); width: 3em; height: 3em; }
+}
+@keyframes move {
+    from { left: 0; }
+    to { left: var(--dx); }
+}
+@keyframes movea {
+    from { left: var(--x1); }
+    to { left: var(--x2); }
+}
+
+div.viewphoto {
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.3);
+    display: flex; align-items: center;
+    img { border: 0.05em solid black; }
+
+    --size: min(96vw - 6em,96vh);
+    div.holder { display: grid; place-items: center;
+        grid-template: calc(100% - 2.5em) 2.5em / 2.5em calc(100% - 5em) 2.5em;
+        #left { grid-area: 1 / 1 / 2 / 2; }
+        #img1 { grid-area: 1 / 2 / 3 / 3; }
+        #right { grid-area: 1 / 3 / 2 / 4; }
+        #delete { grid-area: 2 / 3 / 3 / 4; }
+        button { font-size: 2.5em; height: 1em; display: inline-flex;
+            align-items: center; min-width: unset; padding: 0; }
+
+        position: absolute; overflow: hidden;
+        &.open { animation: open 0.3s both; }
+        &.close { animation: close 0.2s both; }
+        img { width: auto; height: auto; position: relative;
+            max-width: calc(100% - 6em); max-height: 100%; display: inline-block;
+    }}
+    img.move { animation: move 0.2s both; }
+    img.movea { animation: movea 0.2s both; }
+    div.button { width: 2em; height: 2em; background-color: #eee; border: 1px solid black;
+        min-width: 2em;
+        display: inline-block;
+    }
+    #img1 { cursor: pointer; }
+    .hide { visibility: hidden; }
+}
+
+/*--- Add a photo ---*/
+div.addphoto {
+    #img, #orig { display: none; }
+    position: absolute; left: 0; top: 0; min-width: 100vw; min-height: 100vh;
+    background-color: rgba(0,0,0,0.3);
+    display: grid; place-items: center;
+    div.popup { margin: 1em 2em;
+        border: 0.03em solid black; border-radius: 0.8em;
+        background-color: white; padding: 1em;
+        #images { text-align: center; }
+        #full, #thumb { display: inline-block;
+            width: auto; height: auto; border: 1px solid black; }
+        #full { max-width: calc(80% - 1em); max-height: 80vh; margin-right: 0.5em; }
+        #thumb { vertical-align: top; }
+        #svg { display: none; position: absolute;
+            #frame { fill: rgba(0,0,0,0); stroke-width: 0.15em; stroke: red; cursor: grab; }
+            path { stroke: rgba(0,0,0,0); stroke-width: 0.5em; fill: none; }
+            #no, #so { cursor: ns-resize; }
+            #we, #ea { cursor: ew-resize; }
+        }
+    }
+}

@@ -5,7 +5,7 @@ function get() {
     while($f = $q->fetch_assoc()) array_push($out, $f);
 }
 function create() {
-    _insert('events', ['category', 'day', 'time', 'duration', 'desc']);
+    _insert('events', ['category', 'day', 'time', 'duration', 'description']);
 }
 function update() {
     _update('events', ['day', 'time', 'duration']);

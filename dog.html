@@ -4,10 +4,9 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="./font.css">
-<link rel="stylesheet" href="./icons.css">
+<link rel="stylesheet" href="dog.css">
 </head>
 <body>
-
 <script type="module">
 import { Page } from "./lib/domchain.js";
 import { PageParse } from './lib/domchainparse.js';
@@ -21,12 +20,8 @@ import { Alert } from "./lib/alert.js";
 Page.prototype.parse = PageParse;
 const em = parseFloat(window.getComputedStyle(document.body).fontSize);
 
-main();
-
-async function main() {
-    const dogdata = await getParams();
-    showUI(dogdata);
-}
+const dogdata = await getParams();
+showUI(dogdata);
 
 async function getParams() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -54,68 +49,35 @@ async function showUI(dogdata) {
     const photolist = [];
     let photolist_stored;
     for (const i of ownerdata) ownerlist.push(i.name);
-    let name = false, breed = false, rating = false, owner = false, phone = false;
+    let name = false, breed = false, rating = false, owner = false, phone = false, couldsave = true;
     const field = {};
 
     showTable();
     await fillData();
-    getPhotos();
+    showPhotos();
 
     function putLoader() {
-        const style = `
-        div.loader {
-            position: fixed; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.9);
-            display: flex; align-items: center; justify-content: center; z-index: 1000;
-            div.spinner { width: 5em; display: inline-block; }
-        }`;
-
         const spinner = new Spinner2();
         const loader = Page.body.insert("div.loader");
-        loader.insert('style').text(style).append(new Page(spinner.e)).class('spinner');
+        loader.insert(new Page(spinner.e)).class('spinner');
         return loader;
     }
 
     function showTable() {
-        const style = `
-table { max-width: 50em; margin: 0 auto; border-collapse: collapse;
-    th { font-size: 1.2em; font-weight: bold; text-align: center; background-color: #eee; }
-    tr.spacer { height: 1em; }
-    td,th {  padding: 0.3em 0.5em; }
-    td.r { text-align: right; padding: 0.8em 0.2em 0.2em 1em; vertical-align: top; }
-    td.l { min-width: 20em; }
-    td#rating { font-size: 1.6em; span { cursor: pointer; } }
-}
-.field {
-    border: 0.03em solid black; border-radius: 0.3em; display: inline-block;
-    padding: 0.3em 0.6em; font-size: 1.1em;
-    overflow: hidden; max-width: 40em;
-}
-.placeholder { opacity: 0.4; color: red; font-size: 0.8em; }
-#name, #breed, #owner, #phone { height: 1.4em; min-width: 15em; }
-#notes { min-height: 1.4em; min-width: 15em; }
-p.buttons { text-align: center; margin: 0 0.5em; }
-button { margin: 0.1em 0.25em; min-width: 6em; }
-div.dictionary { border: 0.01em solid black;
-    div { padding: 0.1em 0.6em; background-color: #fff; }
-}
-div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
-    margin-right: 0.3em; width: 3em; height: 3em; cursor: pointer; display: inline-block; }
-        `;
-    
         Page.body.parse(`
-        style{ "${style}" } 
-        table{ tr{ th<$colspan:3>('${title}') }
-            tr.spacer
-            tr{ td.r(Name) td.l{ br#name } }
-            tr{ td.r(Breed) td{ br#breed} td{img#bicon} }
-            tr{ td.r(Rating) td#rating }
-            tr{ td.r(Photos) td#photos }
-            tr{ td.r(Notes) td{ br#notes } }
-            tr{ td.r(Owner) td{ br#owner } }
-            tr{ td.r(Phone) td{ br#phone } }
-            tr{ td<$colspan:3>{ p.buttons{ button#save(Save) button#cancel(Cancel) }}}
-            tr.spacer
-        }`);
+            table{ tr{ th<$colspan:3>('${title}') }
+                tr.spacer
+                tr{ td.r(Name) td.l{ br#name } }
+                tr{ td.r(Breed) td{ br#breed} td{img#bicon} }
+                tr{ td.r(Rating) td#rating }
+                tr{ td.r(Photos) td#photos }
+                tr{ td.r(Notes) td{ br#notes } }
+                tr{ td.r(Owner) td{ br#owner } }
+                tr{ td.r(Phone) td{ br#phone } }
+                tr{ td<$colspan:3>{ p.buttons{ button#save(Save) button#cancel(Cancel) }}}
+                tr.spacer
+            }
+        `);
 
         field.name = new Field({
             placeholder: "input the dog's name", hardlimit: 32, nonEmpty: true,
@@ -133,7 +95,14 @@ div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
         field.owner = new Field({
             placeholder: "select or input the dog's owner's name", hardlimit: 32, nonEmpty: true,
             dictionary: ownerlist,
-            onChange: (value) => { owner = value; canSave(); }
+            onChange: (value) => {
+                for (let i in ownerdata)
+                    if (ownerdata[i].name == value) {
+                        phone = ownerdata[i].phone;
+                        field.phone.set(phone);
+                    }
+                owner = value; canSave();
+            }
         });
         field.phone = new Phone({
             onChange: (value) => { phone = value; canSave(); }
@@ -158,11 +127,14 @@ div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
     function canSave() {
         const cansave = rating && name && breed && owner && phone;
         Page.$save.e.disabled = !cansave;
-        if (cansave) Page.$save.e.focus();
+        if (cansave && !couldsave) Page.$save.e.focus();
+        couldsave = cansave;
     }
 
     async function saveDog() {
         const dogs = new Ajax("dogs");
+        let msg;
+        await owners.post('store', { name: owner, phone: phone });
         if (dogdata) {
             const plus = [], minus = [];
             for (const p of photolist) if (!photolist_stored.includes(p)) plus.push(p);
@@ -170,12 +142,17 @@ div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
             await dogs.post('update', {
                 id: dogdata.id, name: name, breed: breed, rating: rating, plus: plus.join(','), minus: minus.join(','),
                     notes: field.notes.value, owner: owner, phone: phone });
+            msg = 'updated';
         } else {
-            const res = await dogs.post('create', {
+            await dogs.post('create', {
                 name: name, breed: breed, rating: rating, photoids: photolist.join(','),
                     notes: field.notes.value, owner: owner, phone: phone });
+            msg = 'saved';
         }
         photolist_stored = photolist;
+        if (owners.error || dogs.error)
+            new Alert("There were issues while trying to save the data.", [ "OK" ]);
+        else new Alert(`The dog data was ${msg}.`, [ "OK" ], () => { window.location.reload(); });
     }
 
     async function fillData() {
@@ -191,56 +168,7 @@ div.plus, img.thumb { border: 0.03em solid black; border-radius: 0.3em;
         canSave();
     }
 
-    function getPhotos() {
-        const style = `
-@keyframes open {
-    from { left: var(--left); top: var(--top); width: 3em; height: 3em; }
-    to { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
-}
-@keyframes close {
-    from { left: 2vw; top: 2vh; width: 96vw; height: 96vh; }
-    to { left: var(--left); top: var(--top); width: 3em; height: 3em; }
-}
-@keyframes move {
-    from { left: 0; }
-    to { left: var(--dx); }
-}
-@keyframes movea {
-    from { left: var(--x1); }
-    to { left: var(--x2); }
-}
-
-div.viewphoto {
-    position: fixed; left: 0; top: 0; right: 0; bottom: 0;
-    background-color: rgba(0,0,0,0.3);
-    display: flex; align-items: center;
-    img { border: 0.05em solid black; }
-
-    --size: min(96vw - 6em,96vh);
-    div.holder { display: grid; place-items: center;
-        grid-template: calc(100% - 2.5em) 2.5em / 2.5em calc(100% - 5em) 2.5em;
-        #left { grid-area: 1 / 1 / 2 / 2; }
-        #img1 { grid-area: 1 / 2 / 3 / 3; }
-        #right { grid-area: 1 / 3 / 2 / 4; }
-        #delete { grid-area: 2 / 3 / 3 / 4; }
-
-        position: absolute; overflow: hidden;
-        &.open { animation: open 0.3s both; }
-        &.close { animation: close 0.2s both; }
-        img { width: auto; height: auto; position: relative;
-            max-width: calc(100% - 6em); max-height: 100%; display: inline-block;
-    }}
-    img.move { animation: move 0.2s both; }
-    img.movea { animation: movea 0.2s both; }
-    div.button { width: 2em; height: 2em; background-color: #eee; border: 1px solid black;
-        min-width: 2em;
-        display: inline-block;
-    }
-    #img1 { cursor: pointer; }
-    .hide { visibility: hidden; }
-}
-        `;
-
+    function showPhotos() {
         const loaded = [], photos = [];
         for (const n in photolist) {
             loaded[n] = false;
@@ -256,7 +184,7 @@ div.viewphoto {
         if (photolist.length == 0) displayPhotos();
 
         function displayPhotos() {
-            Page.$photos.clear().insert('style').text(style);
+            Page.$photos.clear();
 
             for (let n = 0; n < photos.length; n++) {
                 const photo = photos[n];
@@ -265,12 +193,15 @@ div.viewphoto {
                 photo.e.onclick = () => {
                     const box = photo.getaBox();
                     Page.setRoot({ left: `${ box.left }px`, top: `${box.top}px` });
-                    Page.body.parse(`div.viewphoto#viewphoto {
-                        div.holder.open#holder {
-                            div.icon.left.button.hide#left img#img1
-                            div.icon.right.button.hide#right
-                            div.icon.delete.button.hide#delete
-                        }}`);
+                    Page.body.parse(`
+                        div.viewphoto#viewphoto {
+                            div.holder.open#holder {
+                                button.hide(🡄)#left img#img1
+                                button.hide(🡆)#right
+                                button.hide(🗑)#delete
+                            }
+                        }
+                    `);
                     Page.$img1.set({ $src: photo.e.src });
                     setTimeout(() => { setCarousel(n); }, 300);
                 }
@@ -290,7 +221,6 @@ div.viewphoto {
                     Page.$holder.declass("open").class("close");
                     setTimeout(() => { Page.$viewphoto.remove(); }, 200);
                 };
-
                 if (n > 0) {
                     Page.$left.declass('hide');
                     Page.$left.e.onclick = () => { go(n, -1); };
@@ -339,41 +269,17 @@ div.viewphoto {
         });
         if (input === -1 || input === -2) return;
         
-        const style = `
-div.addphoto {
-    #img, #orig { display: none; }
-    position: absolute; left: 0; top: 0; min-width: 100vw; min-height: 100vh;
-    background-color: rgba(0,0,0,0.3);
-    display: grid; place-items: center;
-    div.popup { margin: 1em 2em;
-        border: 0.03em solid black; border-radius: 0.8em;
-        background-color: white; padding: 1em;
-        #images { text-align: center; }
-        #full, #thumb { display: inline-block;
-            width: auto; height: auto; border: 1px solid black; }
-        #full { max-width: calc(80% - 1em); max-height: 80vh; margin-right: 0.5em; }
-        #thumb { vertical-align: top; }
-        #svg { display: none; position: absolute;
-            #frame { fill: rgba(0,0,0,0); stroke-width: 0.15em; stroke: red; cursor: grab; }
-            path { stroke: rgba(0,0,0,0); stroke-width: 0.5em; fill: none; }
-            #no, #so { cursor: ns-resize; }
-            #we, #ea { cursor: ew-resize; }
-        }
-    }
-}
-        `;
-    
         Page.body.parse(`
-        div.addphoto#popup {
-            style { "${style}" } 
-            img#img canvas#orig
-            div.popup {
-                div#images { canvas#full canvas#thumb }
-                svg#svg { rect#frame path#no path#ea path#so path#we }
-                p.buttons {  button#cclkwise(↺) button#clkwise(↻)
-                    button#saveimg(Save) button#cancelimg(Cancel) }
+            div.addphoto#popup {
+                img#img canvas#orig
+                div.popup {
+                    div#images { canvas#full canvas#thumb }
+                    svg#svg { rect#frame path#no path#ea path#so path#we }
+                    p.buttons {  button#cclkwise(↺) button#clkwise(↻)
+                        button#saveimg(Save) button#cancelimg(Cancel) }
+                }
             }
-        }`);
+        `);
         const select = {};
         const image = Page.$img.e;
         const ctx = Page.$thumb.e.getContext("2d");
@@ -504,7 +410,7 @@ div.addphoto {
             Page.$thumb.e.toBlob(async (blob) => {
                 const data = await photoapi.post('store', { file: blob });
                 if (data.num!=-1) photolist.push(data.num); 
-                close(); getPhotos();
+                close(); showPhotos();
             }, 'image/webp', 0.95);
         };
 
