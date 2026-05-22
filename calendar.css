@@ -36,15 +36,19 @@ td.cell {
     &:active { border: solid 0.01em black; }
 }
 td.time { text-align: right; vertical-align: top; font-size: 0.8em; line-height: 0; }
-div.c1 { box-shadow: inset 0 0 0 0.1em #cc0000; background-color: #ffcccc; }
-div.c2 { box-shadow: inset 0 0 0 0.1em #cc6600; background-color: #ffe5cc; }
-div.c3 { box-shadow: inset 0 0 0 0.1em #cccc00; background-color: #ffffcc; }
-div.c4 { box-shadow: inset 0 0 0 0.1em #66cc00; background-color: #e5ffcc; }
-div.c5 { box-shadow: inset 0 0 0 0.1em #00cc00; background-color: #ccffcc; }
-div.c6 { box-shadow: inset 0 0 0 0.1em #00cccc; background-color: #ccffff; }
-div.c7 { box-shadow: inset 0 0 0 0.1em #0066cc; background-color: #cce5ff; }
-div.c8 { box-shadow: inset 0 0 0 0.1em #6600cc; background-color: #e5ccff; }
-div.c9 { box-shadow: inset 0 0 0 0.1em #cc00cc; background-color: #ffccff; }
+div.c0 { box-shadow: inset 0 0 0 0.1em #000000; background-color: #00000008; }
+div.c1 { box-shadow: inset 0 0 0 0.1em #ff0000; background-color: #ff000020; }
+div.c2 { box-shadow: inset 0 0 0 0.1em #ee7700; background-color: #ee770020; }
+div.c3 { box-shadow: inset 0 0 0 0.1em #dddd00; background-color: #dddd0020; }
+div.c4 { box-shadow: inset 0 0 0 0.1em #77ee00; background-color: #77ee0020; }
+div.c5 { box-shadow: inset 0 0 0 0.1em #00ff00; background-color: #00ff0020; }
+div.c6 { box-shadow: inset 0 0 0 0.1em #00ee77; background-color: #00ee7720; }
+div.c7 { box-shadow: inset 0 0 0 0.1em #00cccc; background-color: #00cccc20; }
+div.c8 { box-shadow: inset 0 0 0 0.1em #0077ee; background-color: #0077ee20; }
+div.c9 { box-shadow: inset 0 0 0 0.1em #3333ff; background-color: #3333ff20; }
+div.c10 { box-shadow: inset 0 0 0 0.1em #7700ee; background-color: #7700ee20; }
+div.c11 { box-shadow: inset 0 0 0 0.1em #dd00dd; background-color: #dd00dd20; }
+div.c12 { box-shadow: inset 0 0 0 0.1em #ee0077; background-color: #ee007720; }
 
 div.event { position: absolute; border-radius: 0.4em; overflow: hidden; cursor: pointer;
     &.openCell { animation-name: openCell; animation-duration: 0.1s;
@@ -98,4 +102,9 @@ div.screener { position: absolute; left: 0px; top: 0px; width: 0; height: 0;
 
 span.NumberInput { cursor: pointer;
     &:focus { background-color: #ccc; outline: none; } 
+}
+
+
+div.eventscreen {
+    position: absolute; border: 0.1em solid black; background-color: white; border-radius: 1em;
 }

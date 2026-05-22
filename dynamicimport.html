@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<script type="module">
+const urlParams = new URLSearchParams(window.location.search);
+const id = parseInt(urlParams.get('id'));
+    let dogdata;
+    if (!isNaN(id)) {
+        const dogs = new Ajax('dogs');
+        dogdata = await dogs.get({ id: id });
+        if (!dogdata) window.location.replace("dog.html");
+    }
+    return dogdata;
+
+const loader = new (await import('./loader.js')).Loader;
+//import { Loader } from './loader.js';
+//const loader = new Loader();
+setTimeout(() => { loader.clear() }, 3000);
+</script>
+</body>
+</html>

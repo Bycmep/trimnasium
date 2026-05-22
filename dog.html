@@ -3,7 +3,8 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="./font.css">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="lib/alert.css">
 <link rel="stylesheet" href="dog.css">
 </head>
 <body>
@@ -21,7 +22,7 @@ Page.prototype.parse = PageParse;
 const em = parseFloat(window.getComputedStyle(document.body).fontSize);
 
 const dogdata = await getParams();
-showUI(dogdata);
+showUI();
 
 async function getParams() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -35,7 +36,7 @@ async function getParams() {
     return dogdata;
 }
 
-async function showUI(dogdata) {
+async function showUI() {
     const title = dogdata ? 'Edit Dog Record' : 'New Dog Record';
     document.title = title;
     const loader = putLoader();
@@ -58,7 +59,7 @@ async function showUI(dogdata) {
 
     function putLoader() {
         const spinner = new Spinner2();
-        const loader = Page.body.insert("div.loader");
+        const loader = Page.body.insert("div.blocker");
         loader.insert(new Page(spinner.e)).class('spinner');
         return loader;
     }
@@ -282,9 +283,9 @@ async function showUI(dogdata) {
         `);
         const select = {};
         const image = Page.$img.e;
-        const ctx = Page.$thumb.e.getContext("2d");
-        const ctxf = Page.$full.e.getContext("2d");
-        const ctxo = Page.$orig.e.getContext("2d", { willReadFrequently: true });
+        const ctx = Page.$thumb.e.getContext("2d", { alpha: false });
+        const ctxf = Page.$full.e.getContext("2d", { alpha: false });
+        const ctxo = Page.$orig.e.getContext("2d", { willReadFrequently: true, alpha: false });
         const svgMargin = 0.5*em, minSize = 128;
         let alpha = 0, width0, height0, width, height;
 
@@ -314,26 +315,26 @@ async function showUI(dogdata) {
             }  
 
             ctxo.drawImage(image, 0, 0);
-            const data = ctxo.getImageData(0, 0, width0, height0);
-            const data2 = new ImageData(width, height, { colorSpace: "srgb" });
-            const scr = width*height*4;
+            const imageData = ctxo.getImageData(0, 0, width0, height0);
+            const newImageData = new ImageData(width, height, { colorSpace: "srgb" });
+            const data1 = new Uint32Array(imageData.data.buffer);
+            const data2 = new Uint32Array(newImageData.data.buffer);
+            
+            const scr = width*height;
             let j, dj;
             switch (alpha) {
-                case 0: j = 0; dj = 4; break;
-                case 1: j = width*4 - 4; dj = width*4; break;
-                case 2: j = scr - 4; dj = -4; break;
-                case 3: j = scr - width*4; dj = -width*4; break;
+                case 0: j = 0; dj = 1; break;
+                case 1: j = width - 1; dj = width; break;
+                case 2: j = scr - 1; dj = -1; break;
+                case 3: j = scr - width; dj = -width; break;
             }
-            for (let i = 0; i < scr; i += 4) {
-                data2.data[j] = data.data[i];
-                data2.data[j + 1] = data.data[i + 1];
-                data2.data[j + 2] = data.data[i + 2];
-                data2.data[j + 3] = data.data[i + 3];
+            for (let i = 0; i < scr; i++) {
+                data2[j] = data1[i];
                 j += dj;
-                if (j > scr) j -= scr + 4;
-                else if (j < 0) j += scr + 4;
+                if (j > scr) j -= scr + 1;
+                else if (j < 0) j += scr + 1;
             }
-            ctxf.putImageData(data2, 0, 0);
+            ctxf.putImageData(newImageData, 0, 0);
             iniCrop(); setSvg(); cropImage();
         }
 

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./common.css">
+<style>
+    div.test {
+        position: absolute; left: 70vw; top: 2vh; width: 10vw; height: 30vh;
+        border: 3px solid red; background-color: pink; border-radius: 2em;
+    }
+</style>
+</head>
+<body>
+
+<script type="module">
+import { Page } from "./lib/domchain.js";
+import { aniMove } from "./lib/animove.js";
+
+const button = Page.body.insert("button").text("Test");
+const obj = Page.body.insert("div.test");
+
+button.e.onclick = () => {
+    aniMove(obj.e, { top: '2vh', left: '70vw', width: '10vw', height: '30vh' },
+        { top: '80vh', left: '1vw', width: '40vw', height: '3vh' }, 0.2, true).
+        then(() => { console.log('finished'); });
+
+};
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+@keyframes _alert_in_ { from { opacity: 0; } to { opacity: 1; } }
+@keyframes _alert_out_ { from { opacity: 1; } to { opacity: 0; } }
+div._alert_ {
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+    div { background-color: white; border: 0.05em solid black; border-radius: 0.7em;
+        text-align: center; padding: 0.6em 1em; 
+        &.in { animation: _alert_in_ 0.2s both; }
+        &.out { animation: _alert_out_ 0.2s both; }
+    }
+    p.buttons { text-align: center; margin: 0.5em 0; }
+    button { width: 6em; margin: 0 0.5em; }
+}

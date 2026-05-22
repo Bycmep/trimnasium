@@ -107,4 +107,5 @@ div.addphoto {
             #we, #ea { cursor: ew-resize; }
         }
     }
+    p.buttons { text-align: center; margin: 0 0.5em; }
 }
