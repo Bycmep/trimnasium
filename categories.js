@@ -3,17 +3,15 @@ import { PageParse } from './domchainparse.js';
 Page.prototype.parse = PageParse;
 import { Ajax } from "./ajax.js";
 import { Field } from "./field.js";
-import { Spinner } from "./spinner2.js";
 import { Alert } from "./alert.js";
-import { getCSS } from "./loader.js";
 
 export const main = async (loader) => {
     // TO DO
     // 1. Deletion of categories marked for replacement
     // Maybe should get rid of save concept
     // 3. Keep the screen blocked while requesting how many events has the category
-    getCSS("../common.css");
-    getCSS("../categories.css");
+    Page.link('../common.css');
+    Page.link('../categories.css');
     const title = 'Modify Categories'; document.title = title;
 
     const categoriesDB = new Ajax('categories');
@@ -26,7 +24,7 @@ export const main = async (loader) => {
     Page.body.parse(`
         table.ui#table{ tr.title{ td<$colspan:2>('${title}') }
             tr.head{ td.b(Category) td.b(Color) }
-            tr{ td.l.icon.big(➕) }
+            tr{ td.l.icon.big#add(➕) }
         }
     `);
 

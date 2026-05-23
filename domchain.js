@@ -146,4 +146,12 @@ export class Page {
         document.head.appendChild(style);
         return new Page(style);
     }
+
+    static link(url, onload) {
+        const e = document.createElement('link');
+        e.rel = 'stylesheet'; e.type = 'text/css'; e.href = url;
+        document.head.appendChild(e);
+        if (onload) e.onload = onload;
+        return new Page(e);
+    }
 }
